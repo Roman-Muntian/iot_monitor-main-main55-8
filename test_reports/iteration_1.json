@@ -1,0 +1,47 @@
+{
+  "summary": "Tested IoT Monitor Neo-Brutalist redesign: 4/4 backend pytest tests passed (health, mqtt-config, simulator/state, simulator/spike). Frontend e2e via Playwright covered Dashboard (connection becomes CLIENT ACTIVE, both sensor cards render with live MQTT values 24.0 / 55.3 etc.), Analytics (4 KPIs + Recharts TIMELINE), Logs (filter chips, sort toggle, CSV download with file iot_telemetry_*.csv, date input), and Settings (broker hero with wss://broker.emqx.io:8084/mqtt URL, both range sliders, Save/Reset persists to localStorage iot_settings). Neo-Brutalist style verified visually: 2.5px black borders + hard shadows, vibrant flat colors (yellow / blue / mint / red), no blur, oversized display digits. One non-blocking issue: clicking Trigger Alarm reliably hits POST /api/simulator/spike (200 OK) and publishes 34.2°C / 22% to broker.emqx.io, but the alarm overlay never visibly appears because the running simulator overwrites the out-of-range value within milliseconds with a normal sample.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Dashboard / AlarmOverlay",
+        "issue": "Alarm overlay (data-testid=alarm-overlay) never renders after Trigger Alarm. Backend POST /api/simulator/spike succeeds and publishes 34.2/22.0, but the always-on simulator thread publishes a normal value within ~0–2s, so the React state never settles on an out-of-range value long enough for AlarmOverlay to mount. Polled DOM @100ms for 3s across 3 successive clicks – overlay never appeared. UX-wise the user sees no feedback at all when pressing Trigger Alarm.",
+        "selector": "[data-testid='alarm-overlay']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iot_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Make the alarm overlay observable after Trigger Alarm. Suggested fixes (any one is enough): (a) On triggerSpike(), also set a transient state in MqttContext like spikeActiveUntil = Date.now()+3000 and have AlarmOverlay show during that window regardless of latest temp/hum; (b) Pause the backend simulator for ~3s after /api/simulator/spike so the out-of-range value isn't immediately overwritten; (c) Have the frontend sample alarms on EVERY MQTT message (e.g. push to a transient alarm queue with TTL) instead of only deriving from current temp/hum. Option (a) is the smallest change and keeps logic services untouched."
+  ],
+  "critical_code_review_comments": [
+    "backend/server.py: simulator and spike both create raw paho clients on TCP:1883; spike returns ok=true even if publish fails to actually reach broker (no on_publish ack wait). Consider returning publish-id / waiting for PUBACK for QoS>0, or at least catch connect timeouts.",
+    "backend/server.py uses bare `except Exception:` and prints to stdout; would benefit from a logger and a /api/simulator/pause endpoint to support the alarm-visibility fix above.",
+    "frontend MqttContext.triggerSpike() swallows errors silently (catch {}) — user gets no feedback if backend is unreachable. Consider toast/error tag.",
+    "Dashboard.jsx is ~257 lines but contains multiple sub-components (HeroBlock, SensorCard, AlarmOverlay) inline – fine for now, but split if it grows further.",
+    "All env values are read correctly (REACT_APP_BACKEND_URL, MQTT_* vars). Good.",
+    "data-testid coverage is excellent across pages."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iot_api.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "93%"
+  },
+  "test_credentials": "n/a — public anonymous broker.emqx.io",
+  "seed_data_creation": "None. MQTT data flows live from the public broker + backend simulator.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/test_iot_api.py is the regression suite. Frontend public URL is read from /app/frontend/.env (REACT_APP_BACKEND_URL). When testing the dashboard wait at least 8–12s after page load for first MQTT message to arrive (MQTT WSS handshake to broker.emqx.io:8084 + first sample). The only failing flow is the AlarmOverlay after Trigger Alarm — root cause is timing (simulator overwrites spike). To verify a fix, the spike must keep one or both of temp/hum out of range for at least ~500ms in React state.",
+  "rca of the issue": "POST /api/simulator/spike publishes ONE pair of out-of-range values (34.2°C / 22.0%) to broker.emqx.io on TCP 1883 from a transient client. The backend simulator thread keeps publishing normal samples every 2s on a different client. The frontend MQTT subscriber receives both messages in arrival order; whichever arrives last wins the React state. Because the simulator is running concurrently and can publish microseconds after the spike, the state often lands on a normal value before AlarmOverlay's render cycle observes the out-of-range one. AlarmOverlay only conditions on current temp/hum, not on a transient 'alarm event', so the user sees nothing. Mitigation: introduce a transient alarm event in MqttContext fired on every received MQTT message (not on derived state), OR pause the simulator after /api/simulator/spike, OR keep spikeActiveUntil timestamp in context and force-show the overlay during that window."
+}
