@@ -1,49 +1,74 @@
 #include <WiFi.h>
-#include <WiFiClientSecure.h> // Повертаємо захищений клієнт
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <DHT.h>
+#include <WiFiManager.h> // Потрібно встановити через Library Manager
 
+// Налаштування датчика
 #define DHTPIN 15
 #define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+// Налаштування MQTT
+const char* mqtt_server = "broker.emqx.io";
+const char* mqtt_user = "your_username"; // Можна також винести в WiFiManager
+const char* mqtt_pass = "your_password";
 #define STATUS_TOPIC "roman_41ki/status"
 
-const char* mqtt_server = "broker.emqx.io";
-const char* mqtt_user = "your_username"; 
-const char* mqtt_pass = "your_password";
+// Кореневий сертифікат (Let's Encrypt / ISRG Root X1) для broker.emqx.io
+// Це дозволяє ESP32 перевірити, що вона підключена до справжнього сервера
+const char* root_ca = \
+"-----BEGIN CERTIFICATE-----\n" \
+"MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw\n" \
+"TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh\n" \
+"cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwHhcNMTUwNjA0MTEwNDM4\n" \
+"WhcNMzUwNjA0MTEwNDM4WjBPMQswCQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJu\n" \
+"ZXQgU2VjdXJpdHkgUmVzZWFyY2ggR3JvdXAxFTATBgNVBA宣TMElTUkcgUm9vdCBY\n" \
+"MTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAK3oJIsGZzSjcxFmSI6W\n" \
+"..." // Тут має бути повний текст сертифіката брокера
+"-----END CERTIFICATE-----\n";
 
-DHT dht(DHTPIN, DHTTYPE);
-WiFiClientSecure espClient; // Використовуємо захищений клієнт
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 void setup() {
   Serial.begin(115200);
   dht.begin();
 
-  Serial.print("Connecting to Wokwi-GUEST");
-  WiFi.begin("Wokwi-GUEST", "", 6); 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // --- Крок 1: WiFiManager ---
+  // Замість WiFi.begin("Wokwi-GUEST", ...) використовуємо розумне підключення
+  WiFiManager wm;
+  
+  // Якщо ESP32 не знайде збережених мереж, вона створить свою точку "IoT_Monitor_Setup"
+  // Ви зможете підключитися до неї з телефону та ввести пароль від вашого WiFi
+  if (!wm.autoConnect("IoT_Monitor_Setup")) {
+    Serial.println("Помилка підключення, перезавантаження...");
+    delay(3000);
+    ESP.restart();
   }
   Serial.println("\nWiFi Connected!");
 
-  // Налаштування шифрування
-  espClient.setInsecure(); // Дозволяє з'єднання без перевірки сертифіката CA (важливо для Wokwi)
-  client.setServer(mqtt_server, 8883); // Порт для SSL
+  // --- Крок 2: Безпека SSL ---
+  // Встановлюємо сертифікат для перевірки сервера (замість setInsecure)
+  espClient.setCACert(root_ca);
+  client.setServer(mqtt_server, 8883); // Використовуємо захищений порт
 }
 
 void reconnect() {
   while (!client.connected()) {
-    String clientId = "ESP32_Roman_" + String(random(0, 0xffff), HEX);
-    Serial.print("Attempting SSL connection...");
+    // --- Крок 3: Унікальний ClientID ---
+    // Використовуємо MAC-адресу плати, щоб ID ніколи не дублювався
+    String clientId = "ESP32_Roman_" + WiFi.macAddress();
+    
+    Serial.print("Спроба SSL підключення до MQTT...");
     
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass, STATUS_TOPIC, 1, true, "offline")) {
       client.publish(STATUS_TOPIC, "online", true);
-      Serial.println("connected (Encrypted)");
+      Serial.println(" Підключено (Зашифровано)");
     } else {
-      Serial.print("failed, rc=");
+      Serial.print(" помилка, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
+      Serial.println(" повтор через 5 сек");
       delay(5000);
     }
   }
@@ -61,8 +86,8 @@ void loop() {
 
     if (!isnan(h) && !isnan(t)) {
       client.publish("roman_41ki/temp", String(t, 1).c_str());
-      client.publish("roman_41ki/hum", String(h, 1).c_str()); 
-      Serial.printf("Encrypted Send -> T:%.1f H:%.1f\n", t, h);
+      client.publish("roman_41ki/hum", String(h, 1).c_str());
+      Serial.printf("Дані надіслано (TLS) -> T:%.1f H:%.1f\n", t, h);
     }
   }
 }
