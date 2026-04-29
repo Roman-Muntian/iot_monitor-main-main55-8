@@ -101,7 +101,7 @@ class _NeoButtonState extends State<NeoButton> {
       duration: const Duration(milliseconds: 80),
       curve: Curves.easeOut,
       transform: _pressed
-          ? (Matrix4.identity()..translate(5.0, 5.0))
+          ? Matrix4.translationValues(5.0, 5.0, 0.0)
           : Matrix4.identity(),
       padding: widget.padding,
       decoration: nbBlock(
@@ -168,20 +168,20 @@ class NeoTag extends StatelessWidget {
         _variant = variant;
 
   /// Bright RED block — used for errors / anomalies
-  factory NeoTag.error(String label, {IconData? icon}) =>
-      NeoTag._variant(label: label, variant: _NeoTagVariant.error, icon: icon);
+  factory NeoTag.error(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.error, icon: icon, fontSize: fontSize);
 
   /// Electric BLUE / Hot Magenta block — info entries
-  factory NeoTag.info(String label, {IconData? icon}) =>
-      NeoTag._variant(label: label, variant: _NeoTagVariant.info, icon: icon);
+  factory NeoTag.info(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.info, icon: icon, fontSize: fontSize);
 
   /// Mint / Neon GREEN — success / healthy
-  factory NeoTag.success(String label, {IconData? icon}) =>
-      NeoTag._variant(label: label, variant: _NeoTagVariant.success, icon: icon);
+  factory NeoTag.success(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.success, icon: icon, fontSize: fontSize);
 
   /// Neon YELLOW — warning
-  factory NeoTag.warn(String label, {IconData? icon}) =>
-      NeoTag._variant(label: label, variant: _NeoTagVariant.warn, icon: icon);
+  factory NeoTag.warn(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.warn, icon: icon, fontSize: fontSize);
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +289,7 @@ class NeoSectionHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label.toUpperCase(), style: NB.display(13)),
-            if (trailing != null) trailing!,
+            ?trailing, // <--- Змінено на null-aware оператор
           ],
         ),
         const SizedBox(height: 6),

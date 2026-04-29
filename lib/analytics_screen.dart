@@ -260,7 +260,7 @@ class AnalyticsScreen extends StatelessWidget {
                                 isStrokeCapRound: false,
                                 dotData: FlDotData(
                                   show: true,
-                                  getDotPainter: (spot, _, __, ___) =>
+                                  getDotPainter: (spot, _, _, _) =>
                                       FlDotCirclePainter(
                                     radius: 4.5,
                                     color: NB.neonYellow,
@@ -281,7 +281,7 @@ class AnalyticsScreen extends StatelessWidget {
                                 isStrokeCapRound: false,
                                 dotData: FlDotData(
                                   show: true,
-                                  getDotPainter: (spot, _, __, ___) =>
+                                  getDotPainter: (spot, _, _, _) =>
                                       FlDotCirclePainter(
                                     radius: 4.5,
                                     color: NB.white,
