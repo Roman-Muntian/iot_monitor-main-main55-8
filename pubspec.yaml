@@ -50,6 +50,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
 
@@ -101,3 +102,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  
+  # ОЦЕ ВАЖЛИВО ДЛЯ АНДРОЇД:
+  adaptive_icon_background: "#F4F4F4" # Твій колір фону
+  adaptive_icon_foreground: "assets/icon/app_icon.png" 
+  
+  # Зроби екстремальний відступ для перевірки:
+  image_inset: 45
