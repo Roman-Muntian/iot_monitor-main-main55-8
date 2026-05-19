@@ -10,7 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'db_service.dart';
 import 'theme/neo_brutalist_theme.dart';
@@ -63,7 +63,7 @@ class AnalyticsScreen extends StatelessWidget {
                     ),
                   ),
                   NeoIconBox(
-                    icon: LucideIcons.barChart2,
+                    icon: LucideIcons.chartBar,
                     background: NB.mintGreen,
                     iconColor: Colors.black,
                     size: 48,
@@ -394,7 +394,7 @@ class AnalyticsScreen extends StatelessWidget {
                 shadow: NB.hardShadowSm,
                 borderWidth: NB.borderThin,
               ),
-              child: const Icon(LucideIcons.barChart2, size: 36, color: Colors.black),
+              child: const Icon(LucideIcons.chartBar, size: 36, color: Colors.black),
             ),
             const SizedBox(height: 16),
             Text(t('no_data_yet'), style: NB.display(20)),

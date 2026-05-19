@@ -1,14 +1,10 @@
 // =====================================================================
-//  DASHBOARD DRAWER  (extracted from main.dart)
-//  Brutalist drawer with header, primary nav, separator + export.
-//  Two callbacks:
-//    onOpenSettings — pop drawer + show Settings bottom sheet
-//    onExport       — pop drawer + run CSV export
+//  DASHBOARD DRAWER — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
 // =====================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../analytics_screen.dart';
 import '../app_state.dart';
@@ -53,7 +49,7 @@ class DashboardDrawer extends StatelessWidget {
                   Row(
                     children: [
                       NeoIconBox(
-                        icon: LucideIcons.cpu,
+                        icon: LucideIcons.cpu, //
                         background: NB.neonYellow,
                         size: 52,
                         iconSize: 28,
@@ -103,7 +99,7 @@ class DashboardDrawer extends StatelessWidget {
                   _DrawerItem(
                     title: t('limits_settings'),
                     subtitle: t('limits_settings_sub'),
-                    icon: LucideIcons.sliders,
+                    icon: LucideIcons.slidersHorizontal, // ЗМІНЕНО: sliders -> slidersHorizontal
                     color: NB.neonYellow,
                     textColor: Colors.black,
                     onTap: () {
@@ -131,7 +127,7 @@ class DashboardDrawer extends StatelessWidget {
                   _DrawerItem(
                     title: t('analytics'),
                     subtitle: t('analytics_sub'),
-                    icon: LucideIcons.barChart2,
+                    icon: LucideIcons.chartBar, // ЗМІНЕНО: barChart2 -> chartBar
                     color: NB.mintGreen,
                     textColor: Colors.black,
                     onTap: () {
@@ -152,7 +148,7 @@ class DashboardDrawer extends StatelessWidget {
                   _DrawerItem(
                     title: t('download_csv'),
                     subtitle: t('download_csv_sub'),
-                    icon: LucideIcons.downloadCloud,
+                    icon: LucideIcons.cloudDownload, // ЗМІНЕНО: downloadCloud -> cloudDownload
                     color: NB.white,
                     onTap: () {
                       Navigator.pop(context);
@@ -176,7 +172,7 @@ class DashboardDrawer extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.radioTower, size: 16, color: NB.ink),
+                  Icon(LucideIcons.towerControl, size: 16, color: NB.ink), // ЗМІНЕНО: radioTower -> towerControl + видалено const
                   const SizedBox(width: 8),
                   Text(
                     t('iot_monitor_pro'),

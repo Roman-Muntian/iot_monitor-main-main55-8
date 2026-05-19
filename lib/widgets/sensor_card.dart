@@ -1,12 +1,10 @@
 // =====================================================================
-//  SENSOR CARD  (extracted from main.dart)
-//  Identical visuals & logic — animated value, alarm header swap,
-//  navigation to AnalyticsScreen on tap.
+//  SENSOR CARD — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
 // =====================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../analytics_screen.dart';
 import '../app_state.dart';
@@ -85,7 +83,7 @@ class SensorCard extends StatelessWidget {
                       ),
                       if (alarm)
                         NeoTag.error(t('alarm'),
-                            icon: LucideIcons.alertTriangle)
+                            icon: LucideIcons.triangleAlert) // ЗМІНЕНО
                       else
                         NeoTag(
                           label: t('ok'),
@@ -163,6 +161,7 @@ class SensorCard extends StatelessWidget {
                                 color: NB.mutedInk, weight: FontWeight.w800),
                           ),
                           const SizedBox(width: 4),
+                          // ВИДАЛЕНО const перед Icon, якщо він там був
                           Icon(LucideIcons.chevronRight,
                               size: 16, color: NB.ink),
                         ],

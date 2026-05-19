@@ -1,10 +1,5 @@
-// =====================================================================
-//  BRUTALIST APP BAR + CONNECTION STATUS  (extracted from main.dart)
-//  Pure structural extraction — every padding, border and color preserved.
-// =====================================================================
-
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../app_state.dart';
 import '../mqtt_service.dart';

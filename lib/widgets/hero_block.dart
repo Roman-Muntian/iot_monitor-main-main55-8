@@ -1,10 +1,9 @@
 // =====================================================================
-//  HERO BLOCK  (extracted from main.dart)
-//  Pure structural extraction — visuals identical to the original.
+//  HERO BLOCK — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
 // =====================================================================
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../app_state.dart';
 import '../theme/neo_brutalist_theme.dart';
@@ -26,7 +25,7 @@ class HeroBlock extends StatelessWidget {
           Row(
             children: [
               NeoIconBox(
-                icon: LucideIcons.cpu,
+                icon: LucideIcons.cpu, // Виправлено через новий імпорт
                 background: NB.mintGreen,
                 size: 40,
                 iconSize: 22,
@@ -40,6 +39,7 @@ class HeroBlock extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // У NeoTag іконка передається як IconData, тому працює без помилок
               NeoTag.success(t('live'), icon: LucideIcons.radio),
             ],
           ),

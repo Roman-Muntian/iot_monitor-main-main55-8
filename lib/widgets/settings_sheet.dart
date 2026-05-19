@@ -1,17 +1,10 @@
 // =====================================================================
-//  SETTINGS BOTTOM SHEET  (extracted from main.dart)
-//  - Threshold range sliders (Temperature, Humidity)
-//  - Reset to defaults button
-//  - Language toggle (UK/EN)
-//  - Theme toggle (Light/Dark)
-//
-//  All preferences are persisted (mqtt.settings.update + AppState).
-//  Visuals identical to the original sheet.
+//  SETTINGS BOTTOM SHEET — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
 // =====================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../app_state.dart';
 import '../mqtt_service.dart';
@@ -97,7 +90,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(LucideIcons.rotateCcw, size: 14),
+                    // ВИДАЛЕНО const: іконки тепер динамічні геттери
+                    Icon(LucideIcons.refreshCcw, size: 14), // ЗМІНЕНО: rotateCcw -> refreshCcw
                     const SizedBox(width: 6),
                     Text(t('reset')),
                   ],

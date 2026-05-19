@@ -23,8 +23,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'db_service.dart';
 import 'export_service.dart';
 import 'mqtt_service.dart';
@@ -591,7 +590,7 @@ class _LogScreenState extends State<LogScreen> {
                         ),
                         const SizedBox(width: 10),
                         if (isAnomaly)
-                          NeoTag.error(t('error'), icon: LucideIcons.alertTriangle)
+                          NeoTag.error(t('error'), icon: LucideIcons.triangleAlert)
                         else
                           NeoTag.info(t('info'), icon: LucideIcons.check),
                       ],
@@ -725,7 +724,7 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                     borderWidth: NB.borderThin,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(LucideIcons.alertTriangle,
+                  child: const Icon(LucideIcons.triangleAlert,
                       size: 22, color: Colors.white),
                 ),
                 const SizedBox(width: 14),

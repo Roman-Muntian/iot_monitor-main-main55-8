@@ -1,10 +1,9 @@
 // =====================================================================
-//  LAST UPDATE BLOCK  (extracted from main.dart)
-//  Tiny pill that shows the most recent telemetry timestamp.
+//  LAST UPDATE BLOCK — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
 // =====================================================================
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
 
 import '../app_state.dart';
 import '../theme/neo_brutalist_theme.dart';
@@ -27,7 +26,8 @@ class LastUpdateBlock extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(LucideIcons.clock, size: 16, color: Colors.black),
+          // ВИДАЛЕНО const: іконки в новій бібліотеці не є константами
+          Icon(LucideIcons.clock, size: 16, color: Colors.black), 
           const SizedBox(width: 8),
           Text(
             t('last_update'),
