@@ -1,16 +1,17 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
-  double tempMin = 20.0, tempMax = 20.0;
-  double humMin = 20.0, humMax = 20.0;
+  // 1. Встановлюємо реалістичні межі за замовчуванням
+  double tempMin = 10.0, tempMax = 30.0;
+  double humMin = 30.0, humMax = 70.0;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    // Змінено значення за замовчуванням (після ??) на 20.0
-    tempMin = prefs.getDouble('tempMin') ?? 20.0;
-    tempMax = prefs.getDouble('tempMax') ?? 20.0;
-    humMin = prefs.getDouble('humMin') ?? 20.0;
-    humMax = prefs.getDouble('humMax') ?? 20.0;
+    // 2. Змінюємо значення після ?? на відповідні реалістичні
+    tempMin = prefs.getDouble('tempMin') ?? 10.0;
+    tempMax = prefs.getDouble('tempMax') ?? 30.0;
+    humMin = prefs.getDouble('humMin') ?? 30.0;
+    humMax = prefs.getDouble('humMax') ?? 70.0;
   }
 
   Future<void> update(double tMin, double tMax, double hMin, double hMax) async {

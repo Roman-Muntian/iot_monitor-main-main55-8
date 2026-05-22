@@ -20,13 +20,13 @@
 //  Ukrainian literals because db_service.dart matches them exactly.
 // =====================================================================
 
+import 'settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'db_service.dart';
 import 'export_service.dart';
-import 'mqtt_service.dart';
 import 'theme/neo_brutalist_theme.dart';
 import 'widgets/neo_widgets.dart';
 import 'app_state.dart';
@@ -46,13 +46,25 @@ class LogScreen extends StatefulWidget {
 }
 
 class _LogScreenState extends State<LogScreen> {
-  // ── Logic preserved ─────────────────────────────────────────────
   final DbService _dbService = DbService();
-  final MqttService _mqtt = MqttService();
+  
+  // 1. Використовуємо SettingsService безпосередньо замість MqttService
+  final SettingsService _settings = SettingsService(); 
 
   String _selectedType = 'Всі';
   String _searchDate = '';
   bool _isAscending = false;
+
+  // 2. Додаємо initState для завантаження налаштувань
+  @override
+  void initState() {
+    super.initState();
+    _settings.load().then((_) {
+      if (mounted) {
+        setState(() {}); // Оновлюємо UI після завантаження правильних лімітів
+      }
+    });
+  }
 
   Map<String, List<Map<String, dynamic>>> _groupLogsByDate(
       List<Map<String, dynamic>> logs) {
@@ -93,15 +105,15 @@ class _LogScreenState extends State<LogScreen> {
   bool _isAnomaly(String type, num value) {
     final v = value.toDouble();
     if (type == 'temp') {
-      final cfgMin = _mqtt.settings.tempMin;
-      final cfgMax = _mqtt.settings.tempMax;
+      final cfgMin = _settings.tempMin;
+      final cfgMax = _settings.tempMax;
       if (cfgMin >= cfgMax) {
         return v < _kFallbackTempMin || v > _kFallbackTempMax;
       }
       return v < cfgMin || v > cfgMax;
     } else {
-      final cfgMin = _mqtt.settings.humMin;
-      final cfgMax = _mqtt.settings.humMax;
+      final cfgMin = _settings.humMin;
+      final cfgMax = _settings.humMax;
       if (cfgMin >= cfgMax) {
         return v < _kFallbackHumMin || v > _kFallbackHumMax;
       }
@@ -160,15 +172,17 @@ class _LogScreenState extends State<LogScreen> {
     return Scaffold(
       backgroundColor: NB.paper,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(72),
+        // ЗБІЛЬШИЛИ ВИСОТУ З 72 ДО 85
+        preferredSize: const Size.fromHeight(85),
         child: Container(
           decoration: BoxDecoration(
             color: NB.paper,
             border: Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
           ),
           child: SafeArea(
+            bottom: false, // ВАЖЛИВО: вимикаємо нижній відступ для AppBar
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // ЗБІЛЬШИЛИ ВІДСТУПИ
               child: Row(
                 children: [
                   GestureDetector(
@@ -186,11 +200,18 @@ class _LogScreenState extends State<LogScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(t('log_title'), style: NB.display(20)),
+                        Text(
+                          t('log_title'), 
+                          style: NB.display(20),
+                          maxLines: 1, // ЗАХИСТ ВІД ПЕРЕПОВНЕННЯ
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           t('event_log_telemetry'),
                           style: NB.label(10.5, weight: FontWeight.w800),
+                          maxLines: 1, // ЗАХИСТ ВІД ПЕРЕПОВНЕННЯ
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

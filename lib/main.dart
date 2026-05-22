@@ -11,7 +11,7 @@
 //
 //  ── REFACTOR ──
 //  Heavy UI chunks were extracted into `lib/widgets/`:
-//    BrutalistAppBar, HeroBlock, SensorCard, LastUpdateBlock,
+//    BrutalistAppBar, ConnectionStatusStrip, SensorCard, LastUpdateBlock,
 //    DashboardDrawer, AlarmOverlay, BrutalistRangeSlider,
 //    BrutalistToggle, settings_sheet.showSettingsSheet().
 //  No MQTT / DB / export / simulator logic was touched.
@@ -29,8 +29,8 @@ import 'theme/neo_brutalist_theme.dart';
 
 import 'widgets/alarm_overlay.dart';
 import 'widgets/brutalist_app_bar.dart';
+import 'widgets/connection_status_strip.dart'; // Наша нова смужка
 import 'widgets/dashboard_drawer.dart';
-import 'widgets/hero_block.dart';
 import 'widgets/last_update_block.dart';
 import 'widgets/sensor_card.dart';
 import 'widgets/settings_sheet.dart';
@@ -97,7 +97,6 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  // ── Logic preserved verbatim ─────────────────────────────────────
   final MqttService mqtt = MqttService();
   final DbService _dbService = DbService();
   String _lastUpdate = "--:--:--";
@@ -108,6 +107,22 @@ class _DashboardState extends State<Dashboard> {
     mqtt.connect();
     mqtt.tempStream.listen((_) => _updateTime());
     mqtt.humStream.listen((_) => _updateTime());
+    
+    // 1. ДОДАЄМО СЛУХАЧА: миттєво оновлювати екран при зміні мови/теми
+    AppState.instance.addListener(_rebuildUI);
+  }
+
+  // 2. ФУНКЦІЯ МИТТЄВОГО ОНОВЛЕННЯ
+  void _rebuildUI() {
+    if (mounted) setState(() {});
+  }
+
+  // 3. ДОДАЄМО DISPOSE, щоб очищати пам'ять при закритті додатку
+  @override
+  void dispose() {
+    AppState.instance.removeListener(_rebuildUI);
+    mqtt.dispose(); 
+    super.dispose();
   }
 
   void _updateTime() {
@@ -117,6 +132,8 @@ class _DashboardState extends State<Dashboard> {
       });
     }
   }
+
+  // ... решта коду (build і т.д.) залишається повністю без змін!
 
   Future<void> _exportData() async {
     final allLogs = await _dbService.getLogs();
@@ -148,7 +165,10 @@ class _DashboardState extends State<Dashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const HeroBlock(),
+                
+                // Наша нова смужка статусу підключення замість великого банера
+                ConnectionStatusStrip(mqtt: mqtt), 
+
                 const SizedBox(height: 24),
                 SensorCard(
                   title: t('temperature'),

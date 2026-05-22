@@ -175,7 +175,7 @@ class DashboardDrawer extends StatelessWidget {
                   Icon(LucideIcons.towerControl, size: 16, color: NB.ink), // ЗМІНЕНО: radioTower -> towerControl + видалено const
                   const SizedBox(width: 8),
                   Text(
-                    t('iot_monitor_pro'),
+                    t('KlimaBox'),
                     style: NB.label(11, weight: FontWeight.w900),
                   ),
                 ],

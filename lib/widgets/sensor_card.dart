@@ -1,10 +1,10 @@
 // =====================================================================
-//  SENSOR CARD — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
+//  SENSOR CARD — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER ТА OVERFLOW
 // =====================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../analytics_screen.dart';
 import '../app_state.dart';
@@ -83,7 +83,7 @@ class SensorCard extends StatelessWidget {
                       ),
                       if (alarm)
                         NeoTag.error(t('alarm'),
-                            icon: LucideIcons.triangleAlert) // ЗМІНЕНО
+                            icon: LucideIcons.triangleAlert)
                       else
                         NeoTag(
                           label: t('ok'),
@@ -154,14 +154,21 @@ class SensorCard extends StatelessWidget {
                               style: NB.label(10, weight: FontWeight.w900),
                             ),
                           ),
-                          const Spacer(),
-                          Text(
-                            t('tap_for_analytics'),
-                            style: NB.label(10,
-                                color: NB.mutedInk, weight: FontWeight.w800),
+                          const SizedBox(width: 8),
+                          
+                          // Обернули текст в Expanded, щоб він не вилазив за межі екрана
+                          Expanded(
+                            child: Text(
+                              t('tap_for_analytics'),
+                              textAlign: TextAlign.right, // Притискаємо текст вправо
+                              style: NB.label(10,
+                                  color: NB.mutedInk, weight: FontWeight.w800),
+                              maxLines: 1, // Тільки один рядок
+                              overflow: TextOverflow.ellipsis, // Додає '...', якщо текст задовгий
+                            ),
                           ),
+                          
                           const SizedBox(width: 4),
-                          // ВИДАЛЕНО const перед Icon, якщо він там був
                           Icon(LucideIcons.chevronRight,
                               size: 16, color: NB.ink),
                         ],
@@ -172,8 +179,8 @@ class SensorCard extends StatelessWidget {
               ],
             ),
           ),
-        );
+        ); // <- Повернули крапку з комою
       },
-    );
+    ); // <- Повернули крапку з комою
   }
 }

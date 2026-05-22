@@ -17,8 +17,14 @@ class S {
       // Dashboard / AppBar
       'app_title': 'IoT MONITOR',
       'client_active': 'КЛІЄНТ АКТИВНИЙ',
+      
+      // Connection Status (Нові ключі для смужки статусу)
+      'connected': 'ПІДКЛЮЧЕНО',
       'connecting': 'З\'ЄДНАННЯ…',
-      'link_error': 'ПОМИЛКА ЛІНКА',
+      'connection_error': 'ПОМИЛКА З\'ЄДНАННЯ',
+      'disconnected': 'ВІДКЛЮЧЕНО',
+      
+      'link_error': 'ПОМИЛКА ЗВ\'ЯЗКУ', // Виправлено з "лінка"
       'live': 'НАЖИВО',
       'real_time_telemetry': 'РЕАЛЬНИЙ ЧАС',
       'realtime_subtitle':
@@ -67,7 +73,7 @@ class S {
       'log_empty_msg': 'Журнал порожній. Немає даних для завантаження.',
       'no_data_yet': 'ЩЕ НЕМАЄ ДАНИХ',
       'waiting_telemetry': 'Очікування даних з сенсорів…',
-      'tap_chart_point': 'Торкніться будь-якої точки графіка для точного значення',
+      'tap_chart_point': 'Торкніться графіка для точного значення',
 
       // Analytics
       'analytics_title': 'АНАЛІТИКА',
@@ -97,6 +103,7 @@ class S {
       'error': 'ПОМИЛКА',
       'info': 'ІНФО',
       'snack_ok': 'OK',
+      
       // Clear-all action
       'clear_all': 'ОЧИСТИТИ',
       'confirm_delete_title': 'ВИДАЛИТИ ВСІ ЛОГИ?',
@@ -112,7 +119,13 @@ class S {
       // Dashboard / AppBar
       'app_title': 'IoT MONITOR',
       'client_active': 'CLIENT ACTIVE',
+      
+      // Connection Status (Нові ключі для смужки статусу)
+      'connected': 'CONNECTED',
       'connecting': 'CONNECTING…',
+      'connection_error': 'CONNECTION ERROR',
+      'disconnected': 'DISCONNECTED',
+      
       'link_error': 'LINK ERROR',
       'live': 'LIVE',
       'real_time_telemetry': 'REAL-TIME TELEMETRY',
@@ -192,6 +205,7 @@ class S {
       'error': 'ERROR',
       'info': 'INFO',
       'snack_ok': 'OK',
+      
       // Clear-all action
       'clear_all': 'CLEAR ALL',
       'confirm_delete_title': 'DELETE ALL LOGS?',
