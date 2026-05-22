@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "D:/projects/iot_monitor-main-main55-8/windows"
+    "cmake.sourceDirectory": "D:/projects/iot_monitor-main-main55-8/windows",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

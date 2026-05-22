@@ -43,7 +43,7 @@ function AppBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const titleMap = {
-    "/": "IoT MONITOR",
+    "/": "KlimaBox",
     "/analytics": "АНАЛІТИКА",
     "/logs": "ЖУРНАЛ ДАНИХ",
     "/settings": "НАЛАШТУВАННЯ",

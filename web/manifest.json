@@ -1,6 +1,6 @@
 {
-    "name": "iot_monitor",
-    "short_name": "iot_monitor",
+    "name": "KlimaBox",
+    "short_name": "KlimaBox",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
