@@ -18,6 +18,7 @@ class MqttService {
   final _humStream = StreamController<String>.broadcast();
   final _stateStream = StreamController<MqttConnectionState>.broadcast();
 
+  MqttConnectionState currentState = MqttConnectionState.disconnected;
   int _retryCount = 0;
   Timer? _reconnectTimer;
   DateTime? _lastTempDbSave, _lastHumDbSave;
@@ -29,6 +30,7 @@ class MqttService {
 
   Future<void> connect() async {
     _reconnectTimer?.cancel();
+    currentState = MqttConnectionState.connecting;
     _stateStream.add(MqttConnectionState.connecting);
     
     await settings.load();
@@ -61,6 +63,7 @@ class MqttService {
       debugPrint("MQTT: Підключення до $server (Шифрування увімкнено)...");
       await client.connect(mqttUser, mqttPass);
       _retryCount = 0; 
+      currentState = MqttConnectionState.connected;
       _stateStream.add(MqttConnectionState.connected);
       
       client.subscribe('roman_41ki/temp', MqttQos.atMostOnce);
@@ -78,6 +81,7 @@ class MqttService {
 
   void _handleConnectionError(dynamic error) {
     debugPrint("MQTT SSL Error: $error");
+    currentState = MqttConnectionState.error;
     _stateStream.add(MqttConnectionState.error);
     int delay = (2 << _retryCount).clamp(2, 60); 
     _retryCount++;

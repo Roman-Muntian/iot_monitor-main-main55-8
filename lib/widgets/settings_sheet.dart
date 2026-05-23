@@ -93,11 +93,11 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                     onPressed: () {
                       HapticFeedback.mediumImpact();
                       setState(() {
-                        mqtt.settings.update(18, 26, 40, 60);
-                        mqtt.settings.tempMin = 18;
-                        mqtt.settings.tempMax = 26;
-                        mqtt.settings.humMin = 40;
-                        mqtt.settings.humMax = 60;
+                        mqtt.settings.update(10, 30, 30, 70);
+                        mqtt.settings.tempMin = 10;
+                        mqtt.settings.tempMax = 30;
+                        mqtt.settings.humMin = 30;
+                        mqtt.settings.humMax = 70;
                       });
                     },
                     child: Row(

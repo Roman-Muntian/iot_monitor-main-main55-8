@@ -43,7 +43,7 @@ class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      t('app_title'),
+                      t('KlimaBox'),
                       style: NB.display(20),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -71,15 +71,20 @@ class _ConnectionStatus extends StatelessWidget {
       stream: mqtt.stateStream,
       builder: (context, snap) {
         final state = snap.data ?? MqttConnectionState.disconnected;
-        Color color = const Color(0xFF8A8A8A);
-        String label = t('connecting');
+        final bool connected = state == MqttConnectionState.connected;
 
-        if (state == MqttConnectionState.connected) {
+        Color color;
+        String? label; // null = не показуємо текст
+
+        if (connected) {
           color = NB.mintGreen;
-          label = t('client_active');
+          label = null; // лише індикатор
         } else if (state == MqttConnectionState.error) {
           color = NB.hotRed;
-          label = t('link_error');
+          label = null; // лише індикатор
+        } else {
+          color = const Color(0xFF8A8A8A);
+          label = t('connecting');
         }
 
         return Row(
@@ -92,11 +97,13 @@ class _ConnectionStatus extends StatelessWidget {
                 border: Border.all(color: NB.ink, width: 1.5),
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: NB.label(10.5, color: NB.ink, weight: FontWeight.w800),
-            ),
+            if (label != null) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: NB.label(10.5, color: NB.ink, weight: FontWeight.w800),
+              ),
+            ],
           ],
         );
       },

@@ -1,25 +1,28 @@
 // =====================================================================
-//  DASHBOARD DRAWER — ВИПРАВЛЕНО ДЛЯ LUCIDE_ICONS_FLUTTER
+//  DASHBOARD DRAWER — NEO-BRUTALISM + MQTT STREAM INTEGRATION
 // =====================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../analytics_screen.dart';
 import '../app_state.dart';
 import '../log_screen.dart';
+import '../mqtt_service.dart';
 import '../theme/neo_brutalist_theme.dart';
 import 'neo_widgets.dart';
 
 class DashboardDrawer extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback onExport;
+  final MqttService mqtt;
 
   const DashboardDrawer({
     super.key,
     required this.onOpenSettings,
     required this.onExport,
+    required this.mqtt,
   });
 
   @override
@@ -35,71 +38,23 @@ class DashboardDrawer extends StatelessWidget {
         child: Column(
           children: [
             // ── Header ───────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
-              decoration: BoxDecoration(
-                color: NB.electricBlue,
-                border: Border(
-                    bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      NeoIconBox(
-                        icon: LucideIcons.cpu, //
-                        background: NB.neonYellow,
-                        size: 52,
-                        iconSize: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "ROMAN 41-КІ",
-                              style: NB.display(18, color: Colors.white),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            NeoTag.success(t('online'), icon: LucideIcons.signal),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    t('iot_system_active'),
-                    style: NB.label(11,
-                        color: Colors.white, weight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    t('streaming_telemetry'),
-                    style: NB.body(12,
-                        color: Colors.white, weight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(),
 
             // ── Items ────────────────────────────────────────────────
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(18),
                 children: [
-                  Text(t('main_menu'),
-                      style: NB.label(11, weight: FontWeight.w900)),
+                  Text(
+                    t('main_menu'),
+                    style: NB.label(11, weight: FontWeight.w900),
+                  ),
                   const SizedBox(height: 12),
+
+                  // Налаштування
                   _DrawerItem(
                     title: t('limits_settings'),
-                    subtitle: t('limits_settings_sub'),
-                    icon: LucideIcons.slidersHorizontal, // ЗМІНЕНО: sliders -> slidersHorizontal
+                    icon: LucideIcons.slidersHorizontal,
                     color: NB.neonYellow,
                     textColor: Colors.black,
                     onTap: () {
@@ -108,9 +63,10 @@ class DashboardDrawer extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 14),
+
+                  // Журнал
                   _DrawerItem(
                     title: t('event_log'),
-                    subtitle: t('event_log_sub'),
                     icon: LucideIcons.clipboardList,
                     color: NB.electricBlue,
                     textColor: Colors.white,
@@ -119,15 +75,17 @@ class DashboardDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const LogScreen()),
+                          builder: (context) => const LogScreen(),
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 14),
+
+                  // Аналітика
                   _DrawerItem(
                     title: t('analytics'),
-                    subtitle: t('analytics_sub'),
-                    icon: LucideIcons.chartBar, // ЗМІНЕНО: barChart2 -> chartBar
+                    icon: LucideIcons.chartBar,
                     color: NB.mintGreen,
                     textColor: Colors.black,
                     onTap: () {
@@ -135,20 +93,26 @@ class DashboardDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => AnalyticsScreen()),
+                          builder: (context) => AnalyticsScreen(),
+                        ),
                       );
                     },
                   ),
+
                   const SizedBox(height: 22),
                   Container(height: 2.5, color: NB.ink),
                   const SizedBox(height: 22),
-                  Text(t('export_section'),
-                      style: NB.label(11, weight: FontWeight.w900)),
+
+                  // Секція Експорт
+                  Text(
+                    t('export_section'),
+                    style: NB.label(11, weight: FontWeight.w900),
+                  ),
                   const SizedBox(height: 12),
                   _DrawerItem(
                     title: t('download_csv'),
                     subtitle: t('download_csv_sub'),
-                    icon: LucideIcons.cloudDownload, // ЗМІНЕНО: downloadCloud -> cloudDownload
+                    icon: LucideIcons.cloudDownload,
                     color: NB.white,
                     onTap: () {
                       Navigator.pop(context);
@@ -162,17 +126,17 @@ class DashboardDrawer extends StatelessWidget {
             // ── Footer ───────────────────────────────────────────────
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               decoration: BoxDecoration(
                 color: NB.white,
                 border: Border(
-                    top: BorderSide(color: NB.ink, width: NB.borderThick)),
+                  top: BorderSide(color: NB.ink, width: NB.borderThick),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.towerControl, size: 16, color: NB.ink), // ЗМІНЕНО: radioTower -> towerControl + видалено const
+                  Icon(LucideIcons.zap, size: 16, color: NB.ink),
                   const SizedBox(width: 8),
                   Text(
                     t('KlimaBox'),
@@ -186,11 +150,88 @@ class DashboardDrawer extends StatelessWidget {
       ),
     );
   }
+
+  /// Шапка — лише ім'я + дві плашки, без значка та підписів знизу
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      decoration: BoxDecoration(
+        color: NB.electricBlue,
+        border: Border(
+          bottom: BorderSide(color: NB.ink, width: NB.borderThick),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Ім'я користувача — у рамці NeoTag-стилю
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: NB.borderThick),
+              boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4), blurRadius: 0)],
+            ),
+            child: Text(
+              t('user_name'),
+              style: NB.display(16, color: Colors.black),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Плашки: група + динамічний статус MQTT
+          Row(
+            children: [
+              // Плашка групи (статична)
+              NeoTag(
+                label: "41-КІ",
+                color: NB.neonYellow,
+                textColor: Colors.black,
+              ),
+              const SizedBox(width: 8),
+
+              // Плашка статусу MQTT (динамічна через StreamBuilder)
+              StreamBuilder<MqttConnectionState>(
+                stream: mqtt.stateStream,
+                initialData: mqtt.currentState,
+                builder: (context, snapshot) {
+                  final state = snapshot.data ?? MqttConnectionState.connecting;
+                  if (state == MqttConnectionState.connected) {
+                    return NeoTag.success(
+                      t('connected'),
+                      icon: LucideIcons.signal,
+                    );
+                  } else if (state == MqttConnectionState.connecting) {
+                    return NeoTag.warn(
+                      t('connecting'),
+                      icon: LucideIcons.loader,
+                    );
+                  } else {
+                    return NeoTag.error(
+                      t('disconnected'),
+                      icon: LucideIcons.wifiOff,
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+// =====================================================================
+//  _DrawerItem — заголовок + іконка (+ опц. підзаголовок для Експорту)
+// =====================================================================
 
 class _DrawerItem extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
@@ -198,10 +239,10 @@ class _DrawerItem extends StatelessWidget {
 
   const _DrawerItem({
     required this.title,
-    required this.subtitle,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.subtitle,
     this.textColor,
   });
 
@@ -231,9 +272,11 @@ class _DrawerItem extends StatelessWidget {
               child: Icon(icon, size: 20, color: NB.ink),
             ),
             const SizedBox(width: 12),
+
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     title,
@@ -241,15 +284,17 @@ class _DrawerItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle.toUpperCase(),
-                    style:
-                        NB.label(9.5, color: tc, weight: FontWeight.w800),
-                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!.toUpperCase(),
+                      style: NB.label(9.5, color: tc, weight: FontWeight.w800),
+                    ),
+                  ],
                 ],
               ),
             ),
+
             Icon(LucideIcons.chevronRight, size: 18, color: tc),
           ],
         ),

@@ -155,6 +155,7 @@ class _DashboardState extends State<Dashboard> {
       backgroundColor: NB.paper,
       appBar: BrutalistAppBar(mqtt: mqtt),
       drawer: DashboardDrawer(
+        mqtt: mqtt,
         onOpenSettings: () => showSettingsSheet(context, mqtt),
         onExport: _exportData,
       ),
