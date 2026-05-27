@@ -36,7 +36,6 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
 
   @override
   Widget build(BuildContext context) {
-    // ListenableBuilder автоматично оновлює меню миттєво при зміні мови чи теми
     return ListenableBuilder(
       listenable: AppState.instance,
       builder: (context, _) {
@@ -71,35 +70,27 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Title + reset
               Row(
                 children: [
-                  // Обертаємо текст у Expanded, щоб він міг стискатися
                   Expanded(
                     child: Text(
-                      t('settings_title'), 
+                      t('settings_title'),
                       style: NB.display(18),
-                      maxLines: 1, 
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8), 
+                  const SizedBox(width: 8),
                   NeoButton(
                     color: NB.neonYellow,
                     textColor: Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    // ВИПРАВЛЕНО: Додано async, await та видалено ручне дублювання
                     onPressed: () async {
                       HapticFeedback.mediumImpact();
-                      
-                      // Чекаємо на збереження даних у SharedPreferences
                       await mqtt.settings.update(10, 30, 30, 70);
-                      
-                      // Оновлюємо UI безпечно
-                      if (mounted) {
-                        setState(() {});
-                      }
+                      if (mounted) setState(() {});
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -113,8 +104,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 ],
               ),
               const SizedBox(height: 24),
-              
-              // Range sliders
+
+              // Температура — з від'ємними межами
               BrutalistRangeSlider(
                 label: t('temperature'),
                 unit: "°C",
@@ -123,11 +114,12 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 accentTextColor: Colors.black,
                 min: mqtt.settings.tempMin,
                 max: mqtt.settings.tempMax,
+                sliderMin: -20.0,
+                sliderMax: 100.0,
                 onChanged: (v) => setState(() {
                   mqtt.settings.tempMin = v.start;
                   mqtt.settings.tempMax = v.end;
                 }),
-                // ВИПРАВЛЕНО: Додано async / await для onEnd
                 onEnd: (v) async {
                   await mqtt.settings.update(
                     v.start,
@@ -138,6 +130,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 },
               ),
               const SizedBox(height: 22),
+
+              // Вологість
               BrutalistRangeSlider(
                 label: t('humidity'),
                 unit: "%",
@@ -146,11 +140,12 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 accentTextColor: Colors.white,
                 min: mqtt.settings.humMin,
                 max: mqtt.settings.humMax,
+                sliderMin: 0.0,
+                sliderMax: 100.0,
                 onChanged: (v) => setState(() {
                   mqtt.settings.humMin = v.start;
                   mqtt.settings.humMax = v.end;
                 }),
-                // ВИПРАВЛЕНО: Додано async / await для onEnd
                 onEnd: (v) async {
                   await mqtt.settings.update(
                     mqtt.settings.tempMin,
@@ -163,8 +158,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
               const SizedBox(height: 26),
               Container(height: 2.5, color: NB.ink),
               const SizedBox(height: 18),
-              
-              // Language toggle 
+
+              // Мова
               BrutalistToggle(
                 label: t('language'),
                 icon: LucideIcons.languages,
@@ -178,8 +173,8 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 },
               ),
               const SizedBox(height: 18),
-              
-              // Theme toggle 
+
+              // Тема
               BrutalistToggle(
                 label: t('theme'),
                 icon: LucideIcons.contrast,
