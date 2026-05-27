@@ -50,7 +50,7 @@ class _AlarmBanner extends StatelessWidget {
           decoration: nbBlock(color: NB.hotRed, shadow: NB.hardShadow, radius: 8),
           child: Row(
             children: [
-              Icon(LucideIcons.triangleAlert, color: Colors.white, size: 24), // ВИДАЛЕНО const
+              const Icon(LucideIcons.triangleAlert, color: Colors.white, size: 24), // ВИДАЛЕНО const
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

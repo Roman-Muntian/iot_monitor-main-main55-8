@@ -361,9 +361,9 @@ class _LogScreenState extends State<LogScreen> {
           shadow: NB.hardShadowSm,
           borderWidth: NB.borderThin,
         ),
-        child: Row(
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(LucideIcons.trash2, size: 13, color: Colors.white),
             SizedBox(width: 6),
             _ClearAllLabel(),

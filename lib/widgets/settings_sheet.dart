@@ -103,7 +103,7 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(LucideIcons.refreshCcw, size: 14),
+                        const Icon(LucideIcons.refreshCcw, size: 14),
                         const SizedBox(width: 6),
                         Text(t('reset')),
                       ],

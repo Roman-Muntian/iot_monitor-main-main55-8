@@ -128,7 +128,9 @@ class _NeoButtonState extends State<NeoButton> {
         setState(() => _pressed = false);
         widget.onPressed?.call();
       },
-      child: widget.fullWidth ? SizedBox(width: double.infinity, child: btn) : btn,
+      child: widget.fullWidth
+          ? SizedBox(width: double.infinity, child: btn)
+          : btn,
     );
   }
 }
@@ -168,20 +170,44 @@ class NeoTag extends StatelessWidget {
         _variant = variant;
 
   /// Bright RED block — used for errors / anomalies
-  factory NeoTag.error(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
-      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.error, icon: icon, fontSize: fontSize);
+  factory NeoTag.error(String label,
+          {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(
+          key: key,
+          label: label,
+          variant: _NeoTagVariant.error,
+          icon: icon,
+          fontSize: fontSize);
 
-  /// Electric BLUE / Hot Magenta block — info entries
-  factory NeoTag.info(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
-      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.info, icon: icon, fontSize: fontSize);
+  /// Electric BLUE — info entries
+  factory NeoTag.info(String label,
+          {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(
+          key: key,
+          label: label,
+          variant: _NeoTagVariant.info,
+          icon: icon,
+          fontSize: fontSize);
 
   /// Mint / Neon GREEN — success / healthy
-  factory NeoTag.success(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
-      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.success, icon: icon, fontSize: fontSize);
+  factory NeoTag.success(String label,
+          {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(
+          key: key,
+          label: label,
+          variant: _NeoTagVariant.success,
+          icon: icon,
+          fontSize: fontSize);
 
   /// Neon YELLOW — warning
-  factory NeoTag.warn(String label, {Key? key, IconData? icon, double fontSize = 11}) =>
-      NeoTag._variant(key: key, label: label, variant: _NeoTagVariant.warn, icon: icon, fontSize: fontSize);
+  factory NeoTag.warn(String label,
+          {Key? key, IconData? icon, double fontSize = 11}) =>
+      NeoTag._variant(
+          key: key,
+          label: label,
+          variant: _NeoTagVariant.warn,
+          icon: icon,
+          fontSize: fontSize);
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +315,7 @@ class NeoSectionHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label.toUpperCase(), style: NB.display(13)),
-            ?trailing, // <--- Змінено на null-aware оператор
+            if (trailing != null) trailing!,
           ],
         ),
         const SizedBox(height: 6),
@@ -317,7 +343,10 @@ class NeoStripeBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _StripePainter(a: stripeA ?? NB.neonYellow, b: stripeB ?? NB.ink),
+      painter: _StripePainter(
+        a: stripeA ?? NB.neonYellow,
+        b: stripeB ?? NB.ink,
+      ),
       child: child,
     );
   }

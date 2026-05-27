@@ -27,7 +27,7 @@ class LastUpdateBlock extends StatelessWidget {
       child: Row(
         children: [
           // ВИДАЛЕНО const: іконки в новій бібліотеці не є константами
-          Icon(LucideIcons.clock, size: 16, color: Colors.black), 
+          const Icon(LucideIcons.clock, size: 16, color: Colors.black), 
           const SizedBox(width: 8),
           Text(
             t('last_update'),
