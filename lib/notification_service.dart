@@ -2,6 +2,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  
+  // Додаємо внутрішній лічильник для генерації унікальних ID
+  int _notificationId = 0;
 
   Future<void> init() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -26,6 +29,13 @@ class NotificationService {
       ),
       iOS: DarwinNotificationDetails(),
     );
-    await _plugin.show(DateTime.now().millisecond, title, body, details);
+    
+    // Формуємо унікальний ID: беремо поточний час у секундах та додаємо лічильник.
+    // Використання .remainder(2147483647) гарантує, що ми не вийдемо за 
+    // межі максимального розміру 32-бітного числа (ліміт Android Notification ID).
+    final int uniqueId = (DateTime.now().millisecondsSinceEpoch ~/ 1000 + _notificationId++)
+        .remainder(2147483647);
+        
+    await _plugin.show(uniqueId, title, body, details);
   }
 }

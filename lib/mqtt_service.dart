@@ -9,7 +9,9 @@ import 'db_service.dart';
 enum MqttConnectionState { connected, disconnected, connecting, error }
 
 class MqttService {
-  late MqttServerClient client; 
+  // ВИПРАВЛЕНО 1: Змінено 'late' на nullable '?', щоб уникнути LateInitializationError
+  MqttServerClient? client; 
+  
   final settings = SettingsService();
   final _notifications = NotificationService();
   final _dbService = DbService();
@@ -38,38 +40,52 @@ class MqttService {
 
     final String clientId = 'roman_iot_${DateTime.now().millisecondsSinceEpoch}';
     const String server = "broker.emqx.io";
-    const String mqttUser = "your_username"; 
-    const String mqttPass = "your_password";
+    
+    // ВИПРАВЛЕНО 2: Прибрано захардкоджені логіни. Використовуємо анонімний доступ, 
+    // як у вашому sketch.ino, або їх треба витягувати з Env/Settings.
+    const String mqttUser = ""; 
+    const String mqttPass = "";
 
     // НАЛАШТУВАННЯ ДЛЯ ШИФРУВАННЯ
     if (kIsWeb) {
       // Для браузера використовуємо WSS (Secure WebSockets) на порту 8084
       client = MqttServerClient.withPort(server, clientId, 8084);
-      client.useWebSocket = true;
+      client!.useWebSocket = true;
     } else {
       // Для мобільних додатків використовуємо порт 8883 (MQTTS)
       client = MqttServerClient.withPort(server, clientId, 8883);
-      client.useWebSocket = false;
+      client!.useWebSocket = false;
     }
 
-    client.secure = true; // Увімкнено шифрування
-    client.onBadCertificate = (dynamic certificate) => true; // Дозволяємо сертифікати (для тестів)
-    client.logging(on: true);
-    client.keepAlivePeriod = 20;
-    client.autoReconnect = true;
-    client.setProtocolV311();
+    client!.secure = true; // Увімкнено шифрування
+    
+    // ВИПРАВЛЕНО 4: Вимикаємо перевірку сертифікатів ТІЛЬКИ в режимі Debug. 
+    // У продакшні сертифікати (Let's Encrypt для broker.emqx.io) будуть строго перевірятись.
+    if (kDebugMode) {
+      client!.onBadCertificate = (dynamic certificate) => true; 
+    }
+    
+    client!.logging(on: false); // Краще вимкнути для чистоти логів
+    client!.keepAlivePeriod = 20;
+    
+    // ВИПРАВЛЕНО 3: Вимкнено вбудований реконект, оскільки нижче реалізовано 
+    // власний таймер з exponential backoff (_reconnectTimer).
+    client!.autoReconnect = false; 
+    
+    client!.setProtocolV311();
 
     try {
       debugPrint("MQTT: Підключення до $server (Шифрування увімкнено)...");
-      await client.connect(mqttUser, mqttPass);
+      await client!.connect(mqttUser, mqttPass);
+      
       _retryCount = 0; 
       currentState = MqttConnectionState.connected;
       _stateStream.add(MqttConnectionState.connected);
       
-      client.subscribe('roman_41ki/temp', MqttQos.atMostOnce);
-      client.subscribe('roman_41ki/hum', MqttQos.atMostOnce);
+      client!.subscribe('roman_41ki/temp', MqttQos.atMostOnce);
+      client!.subscribe('roman_41ki/hum', MqttQos.atMostOnce);
 
-      client.updates!.listen((c) {
+      client!.updates!.listen((c) {
         final recMess = c[0].payload as MqttPublishMessage;
         final pt = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
         _processData(c[0].topic, pt);
@@ -83,6 +99,8 @@ class MqttService {
     debugPrint("MQTT SSL Error: $error");
     currentState = MqttConnectionState.error;
     _stateStream.add(MqttConnectionState.error);
+    
+    // Кастомна логіка реконекту (експоненційне зростання затримки до 60 сек)
     int delay = (2 << _retryCount).clamp(2, 60); 
     _retryCount++;
     _reconnectTimer = Timer(Duration(seconds: delay), () => connect());
@@ -123,7 +141,12 @@ class MqttService {
 
   void dispose() {
     _reconnectTimer?.cancel();
-    _tempStream.close(); _humStream.close(); _stateStream.close();
-    client.disconnect();
+    _tempStream.close(); 
+    _humStream.close(); 
+    _stateStream.close();
+    
+    // БЕЗПЕЧНИЙ ВИКЛИК: якщо connect() ще не ініціалізував client, 
+    // помилки LateInitializationError не буде
+    client?.disconnect(); 
   }
 }

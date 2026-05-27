@@ -11,17 +11,19 @@ class DbService {
 
   Database? _db;
   final List<Map<String, dynamic>> _webMemoryDb = [];
+  bool _webLogsLoaded = false; // Прапорець для одноразового завантаження
 
-  Future<Database> get db async {
-    if (_db != null) return _db!;
+  // Змінено на Database? щоб безпечно повертати null на Web
+  Future<Database?> get db async {
+    if (_db != null) return _db;
     _db = await _initDb();
-    return _db!;
+    return _db;
   }
 
-  Future<Database> _initDb() async {
+  Future<Database?> _initDb() async {
     if (kIsWeb) {
       await _loadWebLogs();
-      return _db!; 
+      return null; // БЕЗПЕЧНО: повертаємо null замість крашу _db!
     }
 
     String path = join(await getDatabasesPath(), 'iot_telemetry.db');
@@ -42,7 +44,7 @@ class DbService {
   }
 
   Future<void> _loadWebLogs() async {
-    if (!kIsWeb) return;
+    if (!kIsWeb || _webLogsLoaded) return; 
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? savedData = prefs.getString('web_logs');
@@ -51,8 +53,8 @@ class DbService {
         _webMemoryDb.clear();
         _webMemoryDb.addAll(decoded.map((e) => Map<String, dynamic>.from(e)));
       }
+      _webLogsLoaded = true; // Помічаємо як завантажено
     } catch (e) {
-      // ЗАМІНЕНО: print на debugPrint для виправлення попередження
       debugPrint("Помилка завантаження Web-логів: $e");
     }
   }
@@ -70,6 +72,7 @@ class DbService {
     final cleanTimestamp = cleanTime.toIso8601String().split('.').first;
 
     if (kIsWeb) {
+      await _loadWebLogs(); // Гарантуємо, що логи завантажені
       _webMemoryDb.insert(0, {
         'id': DateTime.now().millisecondsSinceEpoch,
         'timestamp': cleanTimestamp,
@@ -82,7 +85,7 @@ class DbService {
     }
 
     final database = await db;
-    await database.insert('logs', {
+    await database!.insert('logs', { // Використовуємо ! оскільки не Web
       'timestamp': cleanTimestamp,
       'type': type,
       'value': value
@@ -97,24 +100,27 @@ class DbService {
 
   Future<void> deleteLog(int id) async {
     if (kIsWeb) {
+      await _loadWebLogs();
       _webMemoryDb.removeWhere((log) => log['id'] == id);
       await _saveWebLogs();
       return;
     }
 
     final database = await db;
-    await database.delete(
+    await database!.delete(
       'logs',
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
+  // ВИПРАВЛЕНО: Тепер type очікується як системний ключ: 'all', 'temp' або 'hum'
   Future<List<Map<String, dynamic>>> getLogs({String? type, String? date}) async {
     if (kIsWeb) {
+      await _loadWebLogs(); // Завантажуємо перед фільтрацією
       return _webMemoryDb.where((log) {
-        bool matchesType = (type == null || type == 'Всі') || 
-                          (log['type'] == (type == 'Температура' ? 'temp' : 'hum'));
+        // Порівнюємо системні ключі напряму
+        bool matchesType = (type == null || type == 'all') || (log['type'] == type);
         bool matchesDate = (date == null || date.isEmpty) || 
                           (log['timestamp'].toString().startsWith(date));
         return matchesType && matchesDate;
@@ -125,9 +131,10 @@ class DbService {
     String where = '1=1';
     List<dynamic> whereArgs = [];
 
-    if (type != null && type != 'Всі') {
+    // Якщо type не 'all', фільтруємо за переданим типом ('temp' або 'hum')
+    if (type != null && type != 'all') {
       where += ' AND type = ?';
-      whereArgs.add(type == 'Температура' ? 'temp' : 'hum');
+      whereArgs.add(type); 
     }
     
     if (date != null && date.isNotEmpty) {
@@ -135,18 +142,19 @@ class DbService {
       whereArgs.add('$date%');
     }
 
-    final result = await database.query('logs', where: where, whereArgs: whereArgs, orderBy: 'timestamp DESC');
+    final result = await database!.query('logs', where: where, whereArgs: whereArgs, orderBy: 'timestamp DESC');
     return result.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<void> clearLogs() async {
     if (kIsWeb) {
+      await _loadWebLogs();
       _webMemoryDb.clear();
       await _saveWebLogs();
       return;
     }
 
     final database = await db;
-    await database.delete('logs');
+    await database!.delete('logs');
   }
 }

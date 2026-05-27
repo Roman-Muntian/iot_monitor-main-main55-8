@@ -18,6 +18,7 @@ class S {
       'app_title': 'IoT MONITOR',
       'client_active': 'КЛІЄНТ АКТИВНИЙ',
       'user_name': 'Мунтян Роман',
+      'user_group': '41-КІ',
       // Connection Status (Нові ключі для смужки статусу)
       'connected': 'ПІДКЛЮЧЕНО',
       'connecting': 'З\'ЄДНАННЯ…',
@@ -120,6 +121,7 @@ class S {
       'app_title': 'IoT MONITOR',
       'client_active': 'CLIENT ACTIVE',
       'user_name': 'Muntian Roman',
+      'user_group': '41-КІ',
       // Connection Status (Нові ключі для смужки статусу)
       'connected': 'CONNECTED',
       'connecting': 'CONNECTING…',

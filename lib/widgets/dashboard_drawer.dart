@@ -37,10 +37,7 @@ class DashboardDrawer extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // ── Header ───────────────────────────────────────────────
             _buildHeader(),
-
-            // ── Items ────────────────────────────────────────────────
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(18),
@@ -51,7 +48,6 @@ class DashboardDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Налаштування
                   _DrawerItem(
                     title: t('limits_settings'),
                     icon: LucideIcons.slidersHorizontal,
@@ -64,7 +60,6 @@ class DashboardDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  // Журнал
                   _DrawerItem(
                     title: t('event_log'),
                     icon: LucideIcons.clipboardList,
@@ -82,7 +77,6 @@ class DashboardDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
 
-                  // Аналітика
                   _DrawerItem(
                     title: t('analytics'),
                     icon: LucideIcons.chartBar,
@@ -93,7 +87,7 @@ class DashboardDrawer extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => AnalyticsScreen(),
+                          builder: (context) => const AnalyticsScreen(),
                         ),
                       );
                     },
@@ -103,7 +97,6 @@ class DashboardDrawer extends StatelessWidget {
                   Container(height: 2.5, color: NB.ink),
                   const SizedBox(height: 22),
 
-                  // Секція Експорт
                   Text(
                     t('export_section'),
                     style: NB.label(11, weight: FontWeight.w900),
@@ -123,7 +116,6 @@ class DashboardDrawer extends StatelessWidget {
               ),
             ),
 
-            // ── Footer ───────────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -151,7 +143,6 @@ class DashboardDrawer extends StatelessWidget {
     );
   }
 
-  /// Шапка — лише ім'я + дві плашки, без значка та підписів знизу
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -165,7 +156,6 @@ class DashboardDrawer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ім'я користувача — у рамці NeoTag-стилю
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -182,18 +172,16 @@ class DashboardDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Плашки: група + динамічний статус MQTT
           Row(
             children: [
-              // Плашка групи (статична)
+              // Плашка групи — винесена в локалізацію
               NeoTag(
-                label: "41-КІ",
+                label: t('user_group'),
                 color: NB.neonYellow,
                 textColor: Colors.black,
               ),
               const SizedBox(width: 8),
 
-              // Плашка статусу MQTT (динамічна через StreamBuilder)
               StreamBuilder<MqttConnectionState>(
                 stream: mqtt.stateStream,
                 initialData: mqtt.currentState,
@@ -226,7 +214,7 @@ class DashboardDrawer extends StatelessWidget {
 }
 
 // =====================================================================
-//  _DrawerItem — заголовок + іконка (+ опц. підзаголовок для Експорту)
+//  _DrawerItem
 // =====================================================================
 
 class _DrawerItem extends StatelessWidget {

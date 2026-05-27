@@ -96,7 +96,13 @@ class _NeoButtonState extends State<NeoButton> {
 
   @override
   Widget build(BuildContext context) {
-    final txtColor = widget.textColor ?? NB.ink;
+    // Якщо onPressed == null, вважаємо кнопку вимкненою
+    final isDisabled = widget.onPressed == null;
+    
+    // Вимкнена кнопка стає сірою
+    final bgColor = isDisabled ? NB.subtleGrey : (widget.color ?? NB.neonYellow);
+    final txtColor = isDisabled ? NB.mutedInk : (widget.textColor ?? NB.ink);
+    
     final btn = AnimatedContainer(
       duration: const Duration(milliseconds: 80),
       curve: Curves.easeOut,
@@ -105,8 +111,9 @@ class _NeoButtonState extends State<NeoButton> {
           : Matrix4.identity(),
       padding: widget.padding,
       decoration: nbBlock(
-        color: widget.color ?? NB.neonYellow,
+        color: bgColor,
         radius: widget.radius,
+        // Якщо кнопка вимкнена, тінь залишається жорсткою, але натискання неможливе
         shadow: _pressed ? NB.hardShadowNone : NB.hardShadow,
       ),
       child: DefaultTextStyle.merge(
@@ -117,6 +124,13 @@ class _NeoButtonState extends State<NeoButton> {
         ),
       ),
     );
+
+    // Якщо вимкнено — повертаємо просто контейнер без обробника подій
+    if (isDisabled) {
+      return widget.fullWidth
+          ? SizedBox(width: double.infinity, child: btn)
+          : btn;
+    }
 
     return GestureDetector(
       onTapDown: (_) {
@@ -137,8 +151,6 @@ class _NeoButtonState extends State<NeoButton> {
 
 // ─────────────────────────────────────────────────────────────────────
 // NeoTag — high-contrast status indicator
-// Variants are encoded as an internal enum so factories don't need to
-// invoke (non-const) NB getters from a const-allowed context.
 // ─────────────────────────────────────────────────────────────────────
 enum _NeoTagVariant { custom, error, info, success, warn }
 
@@ -169,7 +181,6 @@ class NeoTag extends StatelessWidget {
         textColor = null,
         _variant = variant;
 
-  /// Bright RED block — used for errors / anomalies
   factory NeoTag.error(String label,
           {Key? key, IconData? icon, double fontSize = 11}) =>
       NeoTag._variant(
@@ -179,7 +190,6 @@ class NeoTag extends StatelessWidget {
           icon: icon,
           fontSize: fontSize);
 
-  /// Electric BLUE — info entries
   factory NeoTag.info(String label,
           {Key? key, IconData? icon, double fontSize = 11}) =>
       NeoTag._variant(
@@ -189,7 +199,6 @@ class NeoTag extends StatelessWidget {
           icon: icon,
           fontSize: fontSize);
 
-  /// Mint / Neon GREEN — success / healthy
   factory NeoTag.success(String label,
           {Key? key, IconData? icon, double fontSize = 11}) =>
       NeoTag._variant(
@@ -199,7 +208,6 @@ class NeoTag extends StatelessWidget {
           icon: icon,
           fontSize: fontSize);
 
-  /// Neon YELLOW — warning
   factory NeoTag.warn(String label,
           {Key? key, IconData? icon, double fontSize = 11}) =>
       NeoTag._variant(
@@ -308,6 +316,9 @@ class NeoSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Зберігаємо у локальну змінну для безпечного читання та уникнення !
+    final currentTrailing = trailing;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -315,7 +326,7 @@ class NeoSectionHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label.toUpperCase(), style: NB.display(13)),
-            if (trailing != null) trailing!,
+            if (currentTrailing != null) currentTrailing,
           ],
         ),
         const SizedBox(height: 6),

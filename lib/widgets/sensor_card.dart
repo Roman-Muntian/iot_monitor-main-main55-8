@@ -49,7 +49,7 @@ class SensorCard extends StatelessWidget {
             HapticFeedback.lightImpact();
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AnalyticsScreen()),
+              MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
             );
           },
           child: Container(

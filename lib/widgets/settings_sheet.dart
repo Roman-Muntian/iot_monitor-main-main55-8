@@ -71,34 +71,35 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Title + reset
+              
               // Title + reset
               Row(
                 children: [
-                  // Обертаємо текст у Expanded, щоб він міг стискатися,
-                  // а не виштовхувати кнопку за межі екрана
+                  // Обертаємо текст у Expanded, щоб він міг стискатися
                   Expanded(
                     child: Text(
                       t('settings_title'), 
                       style: NB.display(18),
-                      maxLines: 1, // Не дозволяємо переноситись на новий рядок
-                      overflow: TextOverflow.ellipsis, // Додаємо три крапки, якщо не влазить
+                      maxLines: 1, 
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8), // Невеликий відступ між текстом і кнопкою
+                  const SizedBox(width: 8), 
                   NeoButton(
                     color: NB.neonYellow,
                     textColor: Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    onPressed: () {
+                    // ВИПРАВЛЕНО: Додано async, await та видалено ручне дублювання
+                    onPressed: () async {
                       HapticFeedback.mediumImpact();
-                      setState(() {
-                        mqtt.settings.update(10, 30, 30, 70);
-                        mqtt.settings.tempMin = 10;
-                        mqtt.settings.tempMax = 30;
-                        mqtt.settings.humMin = 30;
-                        mqtt.settings.humMax = 70;
-                      });
+                      
+                      // Чекаємо на збереження даних у SharedPreferences
+                      await mqtt.settings.update(10, 30, 30, 70);
+                      
+                      // Оновлюємо UI безпечно
+                      if (mounted) {
+                        setState(() {});
+                      }
                     },
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -112,6 +113,7 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                 ],
               ),
               const SizedBox(height: 24),
+              
               // Range sliders
               BrutalistRangeSlider(
                 label: t('temperature'),
@@ -125,12 +127,15 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                   mqtt.settings.tempMin = v.start;
                   mqtt.settings.tempMax = v.end;
                 }),
-                onEnd: (v) => mqtt.settings.update(
-                  v.start,
-                  v.end,
-                  mqtt.settings.humMin,
-                  mqtt.settings.humMax,
-                ),
+                // ВИПРАВЛЕНО: Додано async / await для onEnd
+                onEnd: (v) async {
+                  await mqtt.settings.update(
+                    v.start,
+                    v.end,
+                    mqtt.settings.humMin,
+                    mqtt.settings.humMax,
+                  );
+                },
               ),
               const SizedBox(height: 22),
               BrutalistRangeSlider(
@@ -145,18 +150,21 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
                   mqtt.settings.humMin = v.start;
                   mqtt.settings.humMax = v.end;
                 }),
-                onEnd: (v) => mqtt.settings.update(
-                  mqtt.settings.tempMin,
-                  mqtt.settings.tempMax,
-                  v.start,
-                  v.end,
-                ),
+                // ВИПРАВЛЕНО: Додано async / await для onEnd
+                onEnd: (v) async {
+                  await mqtt.settings.update(
+                    mqtt.settings.tempMin,
+                    mqtt.settings.tempMax,
+                    v.start,
+                    v.end,
+                  );
+                },
               ),
               const SizedBox(height: 26),
               Container(height: 2.5, color: NB.ink),
               const SizedBox(height: 18),
               
-              // Language toggle (Прибрано await для миттєвого відгуку)
+              // Language toggle 
               BrutalistToggle(
                 label: t('language'),
                 icon: LucideIcons.languages,
@@ -171,7 +179,7 @@ class _SettingsSheetContentState extends State<_SettingsSheetContent> {
               ),
               const SizedBox(height: 18),
               
-              // Theme toggle (Прибрано await для миттєвого відгуку)
+              // Theme toggle 
               BrutalistToggle(
                 label: t('theme'),
                 icon: LucideIcons.contrast,

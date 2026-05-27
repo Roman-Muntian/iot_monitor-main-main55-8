@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart'; // ОНОВЛЕНО
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../app_state.dart';
 import '../mqtt_service.dart';
@@ -42,8 +42,9 @@ class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // ВИПРАВЛЕНО: 'KlimaBox' тепер звичайний літерал, без t()
                     Text(
-                      t('KlimaBox'),
+                      'KlimaBox',
                       style: NB.display(20),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

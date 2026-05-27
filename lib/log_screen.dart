@@ -4,17 +4,12 @@
 //  Logic preserved: filter chips, date filter, dismiss-to-delete,
 //  ascending toggle, CSV export — all unchanged.
 //
-//  ── ISSUE FIXES (Jan 2026) ──
-//  • _isAnomaly():  defaults from MqttService can be 20.0/20.0
-//                   (min == max), which made every reading look anomalous.
-//                   Now falls back to a sensible household range
-//                   (Temp 10–30 °C, Humidity 30–70 %) when the user has
-//                   not yet configured the limits.
-//  • Clear-All:     a chunky Brutalist "ОЧИСТИТИ / CLEAR ALL" button is
-//                   placed in the filter-bar header row (Spacer keeps it
-//                   right-aligned and overflow-safe on small screens).
-//                   Tapping it shows a Brutalist confirmation Dialog;
-//                   on confirm → DbService.clearLogs() + Brutalist SnackBar.
+//  ── ISSUE FIXES ──
+//  • FutureBuilder removed: Logs are now cached in state (_rawLogs).
+//  • Sorting & Deletions now execute instantly by re-processing the
+//    local cache (_processLogs) instead of hitting the DB.
+//  • _isAnomaly() fallbacks to sensible ranges if config is missing.
+//  • Clear-All flows correctly through the new state manager.
 //
 //  IMPORTANT: filter values ('Всі', 'Температура', 'Вологість') remain
 //  Ukrainian literals because db_service.dart matches them exactly.
@@ -31,8 +26,6 @@ import 'theme/neo_brutalist_theme.dart';
 import 'widgets/neo_widgets.dart';
 import 'app_state.dart';
 
-/// Sensible household fallback ranges, used when the user-configured
-/// thresholds in MqttService.settings are unset / invalid (min >= max).
 const double _kFallbackTempMin = 10.0;
 const double _kFallbackTempMax = 30.0;
 const double _kFallbackHumMin = 30.0;
@@ -47,27 +40,56 @@ class LogScreen extends StatefulWidget {
 
 class _LogScreenState extends State<LogScreen> {
   final DbService _dbService = DbService();
-  
-  // 1. Використовуємо SettingsService безпосередньо замість MqttService
   final SettingsService _settings = SettingsService(); 
 
   String _selectedType = 'Всі';
   String _searchDate = '';
   bool _isAscending = false;
 
-  // 2. Додаємо initState для завантаження налаштувань
+  // КЕШУВАННЯ ДАНИХ (Вирішення проблеми з FutureBuilder)
+  List<Map<String, dynamic>>? _rawLogs;
+  Map<String, List<Map<String, dynamic>>>? _groupedLogs;
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
     _settings.load().then((_) {
-      if (mounted) {
-        setState(() {}); // Оновлюємо UI після завантаження правильних лімітів
-      }
+      if (mounted) setState(() {}); 
     });
+    _fetchLogs(); // Первинне завантаження
   }
 
-  Map<String, List<Map<String, dynamic>>> _groupLogsByDate(
-      List<Map<String, dynamic>> logs) {
+  // Завантажує дані з БД (тільки при зміні фільтрів або Refresh)
+  Future<void> _fetchLogs() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    
+    final logs = await _dbService.getLogs(type: _selectedType, date: _searchDate);
+    
+    if (!mounted) return;
+    _rawLogs = logs;
+    _processLogs();
+  }
+
+  // Перераховує сортування та групування локально (без запитів до БД)
+  void _processLogs() {
+    if (_rawLogs == null) return;
+    
+    List<Map<String, dynamic>> logs = List.from(_rawLogs!);
+    
+    if (_isAscending) {
+      logs = logs.reversed.toList();
+    }
+    
+    _groupedLogs = _groupLogsByDate(logs);
+    
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Map<String, List<Map<String, dynamic>>> _groupLogsByDate(List<Map<String, dynamic>> logs) {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var log in logs) {
       final DateTime date = DateTime.parse(log['timestamp']);
@@ -88,20 +110,11 @@ class _LogScreenState extends State<LogScreen> {
   }
 
   Future<void> _exportCurrentView() async {
-    final logs =
-        await _dbService.getLogs(type: _selectedType, date: _searchDate);
-    if (logs.isNotEmpty) {
-      await ExportService.exportLogsToCSV(logs);
+    if (_rawLogs != null && _rawLogs!.isNotEmpty) {
+      await ExportService.exportLogsToCSV(_rawLogs!);
     }
   }
-  // ──────────────────────────────────────────────────────────────────
 
-  // ── ANOMALY CHECK (FIX FOR ISSUE #1) ──────────────────────────────
-  // Returns true ONLY when the value is outside the user's configured
-  // range.  If the configured range is degenerate (min >= max — e.g. the
-  // app's first launch, when SettingsService defaults to 20/20), we fall
-  // back to a sensible household range so normal readings are not falsely
-  // flagged as anomalies.
   bool _isAnomaly(String type, num value) {
     final v = value.toDouble();
     if (type == 'temp') {
@@ -121,7 +134,6 @@ class _LogScreenState extends State<LogScreen> {
     }
   }
 
-  // ── CLEAR-ALL FLOW (FIX FOR ISSUE #2) ─────────────────────────────
   Future<void> _confirmAndClearAll() async {
     HapticFeedback.mediumImpact();
     final confirmed = await showDialog<bool>(
@@ -141,6 +153,10 @@ class _LogScreenState extends State<LogScreen> {
     await _dbService.clearLogs();
     if (!mounted) return;
 
+    // Очищаємо локальний кеш миттєво
+    _rawLogs?.clear();
+    _processLogs();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: NB.ink,
@@ -151,8 +167,7 @@ class _LogScreenState extends State<LogScreen> {
             const SizedBox(width: 10),
             Text(
               t('all_logs_cleared'),
-              style: NB.label(12,
-                  color: NB.neonYellow, weight: FontWeight.w900),
+              style: NB.label(12, color: NB.neonYellow, weight: FontWeight.w900),
             ),
           ],
         ),
@@ -164,7 +179,6 @@ class _LogScreenState extends State<LogScreen> {
         ),
       ),
     );
-    setState(() {});
   }
 
   @override
@@ -172,7 +186,6 @@ class _LogScreenState extends State<LogScreen> {
     return Scaffold(
       backgroundColor: NB.paper,
       appBar: PreferredSize(
-        // ЗБІЛЬШИЛИ ВИСОТУ З 72 ДО 85
         preferredSize: const Size.fromHeight(85),
         child: Container(
           decoration: BoxDecoration(
@@ -180,9 +193,9 @@ class _LogScreenState extends State<LogScreen> {
             border: Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
           ),
           child: SafeArea(
-            bottom: false, // ВАЖЛИВО: вимикаємо нижній відступ для AppBar
+            bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // ЗБІЛЬШИЛИ ВІДСТУПИ
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   GestureDetector(
@@ -203,21 +216,25 @@ class _LogScreenState extends State<LogScreen> {
                         Text(
                           t('log_title'), 
                           style: NB.display(20),
-                          maxLines: 1, // ЗАХИСТ ВІД ПЕРЕПОВНЕННЯ
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           t('event_log_telemetry'),
                           style: NB.label(10.5, weight: FontWeight.w800),
-                          maxLines: 1, // ЗАХИСТ ВІД ПЕРЕПОВНЕННЯ
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => setState(() => _isAscending = !_isAscending),
+                    // Миттєве сортування локально
+                    onTap: () {
+                      _isAscending = !_isAscending;
+                      _processLogs();
+                    },
                     child: NeoIconBox(
                       icon: _isAscending ? LucideIcons.arrowUp : LucideIcons.arrowDown,
                       background: NB.neonYellow,
@@ -250,48 +267,53 @@ class _LogScreenState extends State<LogScreen> {
             child: RefreshIndicator(
               color: NB.ink,
               backgroundColor: NB.neonYellow,
-              onRefresh: () async => setState(() {}),
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _dbService.getLogs(type: _selectedType, date: _searchDate),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(
-                      child: CircularProgressIndicator(color: NB.ink, strokeWidth: 4),
-                    );
-                  }
-
-                  var logs = snapshot.data!;
-                  if (_isAscending) logs = logs.reversed.toList();
-
-                  if (logs.isEmpty) return _emptyState();
-
-                  final groupedLogs = _groupLogsByDate(logs);
-                  final dateKeys = groupedLogs.keys.toList();
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: dateKeys.length,
-                    itemBuilder: (context, index) {
-                      final String dateKey = dateKeys[index];
-                      final List<Map<String, dynamic>> dayLogs = groupedLogs[dateKey]!;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDateHeader(dateKey, dayLogs.length),
-                          const SizedBox(height: 10),
-                          ...dayLogs.map((log) => _buildLogTile(log)),
-                          const SizedBox(height: 18),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
+              onRefresh: _fetchLogs,
+              child: _buildListContent(),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Виділено в окремий метод для чистоти build()
+  Widget _buildListContent() {
+    if (_isLoading || _groupedLogs == null) {
+      return Center(
+        child: CircularProgressIndicator(color: NB.ink, strokeWidth: 4),
+      );
+    }
+
+    if (_rawLogs!.isEmpty) {
+      // Використовуємо ListView, щоб RefreshIndicator працював навіть коли порожньо
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 80), // Відступ для центрування
+          _emptyState(),
+        ],
+      );
+    }
+
+    final dateKeys = _groupedLogs!.keys.toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      itemCount: dateKeys.length,
+      itemBuilder: (context, index) {
+        final String dateKey = dateKeys[index];
+        final List<Map<String, dynamic>> dayLogs = _groupedLogs![dateKey]!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDateHeader(dateKey, dayLogs.length),
+            const SizedBox(height: 10),
+            ...dayLogs.map((log) => _buildLogTile(log)),
+            const SizedBox(height: 18),
+          ],
+        );
+      },
     );
   }
 
@@ -307,9 +329,6 @@ class _LogScreenState extends State<LogScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row: "FILTER BY TYPE"  +  "CLEAR ALL"
-          // Spacer() pushes the destructive action to the far right and
-          // keeps the row overflow-safe on narrow screens.
           Row(
             children: [
               Text(
@@ -325,17 +344,13 @@ class _LogScreenState extends State<LogScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Filter VALUE stays in Ukrainian (matches DB query); only
-                // the visible LABEL is translated.
                 _filterChip('Всі', t('all'), LucideIcons.layers, NB.neonYellow,
                     selectedTextColor: Colors.black),
                 const SizedBox(width: 10),
-                _filterChip(
-                    'Температура', t('temperature'), LucideIcons.thermometer, NB.neonYellow,
+                _filterChip('Температура', t('temperature'), LucideIcons.thermometer, NB.neonYellow,
                     selectedTextColor: Colors.black),
                 const SizedBox(width: 10),
-                _filterChip(
-                    'Вологість', t('humidity'), LucideIcons.droplets, NB.electricBlue,
+                _filterChip('Вологість', t('humidity'), LucideIcons.droplets, NB.electricBlue,
                     selectedTextColor: Colors.white),
                 const SizedBox(width: 16),
                 Container(width: 2.5, height: 32, color: NB.ink),
@@ -349,7 +364,6 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── CLEAR-ALL BUTTON (compact, right-aligned in header row) ──────
   Widget _buildClearAllButton() {
     return GestureDetector(
       onTap: _confirmAndClearAll,
@@ -373,7 +387,6 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── DATE PICKER BUTTON (extracted for readability) ────────────────
   Widget _buildDatePickerButton() {
     return GestureDetector(
       onTap: () async {
@@ -385,20 +398,15 @@ class _LogScreenState extends State<LogScreen> {
           builder: (ctx, child) => Theme(
             data: (NB.isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
               colorScheme: NB.isDark
-                  ? const ColorScheme.dark(
-                      primary: Color(0xFFFF10F0),
-                      onPrimary: Colors.black,
-                    )
-                  : const ColorScheme.light(
-                      primary: Colors.black,
-                      onPrimary: Colors.white,
-                    ),
+                  ? const ColorScheme.dark(primary: Color(0xFFFF10F0), onPrimary: Colors.black)
+                  : const ColorScheme.light(primary: Colors.black, onPrimary: Colors.white),
             ),
             child: child!,
           ),
         );
         if (date != null) {
-          setState(() => _searchDate = DateFormat('yyyy-MM-dd').format(date));
+          _searchDate = DateFormat('yyyy-MM-dd').format(date);
+          _fetchLogs(); // Запит до БД
         }
       },
       child: Container(
@@ -424,7 +432,10 @@ class _LogScreenState extends State<LogScreen> {
             if (_searchDate.isNotEmpty) ...[
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () => setState(() => _searchDate = ''),
+                onTap: () {
+                  _searchDate = '';
+                  _fetchLogs(); // Запит до БД
+                },
                 child: const Icon(LucideIcons.x, size: 14, color: Colors.black),
               ),
             ],
@@ -443,7 +454,12 @@ class _LogScreenState extends State<LogScreen> {
   }) {
     final bool selected = _selectedType == value;
     return GestureDetector(
-      onTap: () => setState(() => _selectedType = value),
+      onTap: () {
+        if (_selectedType != value) {
+          _selectedType = value;
+          _fetchLogs(); // Запит до БД
+        }
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: nbBlock(
@@ -508,12 +524,11 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── LOG TILE (Dismissible preserved) ──────────────────────────
+  // ── LOG TILE ──────────────────────────────────────────────────
   Widget _buildLogTile(Map<String, dynamic> log) {
     final String type = log['type'];
     final num value = log['value'];
     final String time = DateFormat('HH:mm:ss').format(DateTime.parse(log['timestamp']));
-
     final bool isAnomaly = _isAnomaly(type, value);
 
     return Padding(
@@ -539,6 +554,10 @@ class _LogScreenState extends State<LogScreen> {
         onDismissed: (direction) async {
           await _dbService.deleteLog(log['id']);
           if (mounted) {
+            // Миттєве оновлення кешу без запиту до БД
+            _rawLogs?.removeWhere((e) => e['id'] == log['id']);
+            _processLogs();
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: NB.ink,
@@ -559,7 +578,6 @@ class _LogScreenState extends State<LogScreen> {
                 ),
               ),
             );
-            setState(() {});
           }
         },
         child: Container(
@@ -567,7 +585,6 @@ class _LogScreenState extends State<LogScreen> {
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           child: Row(
             children: [
-              // Icon block — typed color
               Container(
                 width: 46,
                 height: 46,
@@ -585,7 +602,6 @@ class _LogScreenState extends State<LogScreen> {
                 ),
               ),
               const SizedBox(width: 14),
-              // Value + label
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -624,7 +640,6 @@ class _LogScreenState extends State<LogScreen> {
                   ],
                 ),
               ),
-              // Time pill
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: nbBlock(
@@ -680,11 +695,6 @@ class _LogScreenState extends State<LogScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// Tiny stateless helper so the Clear-All label rebuilds whenever
-// AppState (language) changes — kept inline because it is purely visual
-// and has no business logic.
-// ─────────────────────────────────────────────────────────────────────
 class _ClearAllLabel extends StatelessWidget {
   const _ClearAllLabel();
 
@@ -697,11 +707,6 @@ class _ClearAllLabel extends StatelessWidget {
   }
 }
 
-// =====================================================================
-//  BRUTALIST CONFIRM DIALOG  (shown by _confirmAndClearAll)
-//  Hard borders, hard shadow, no rounded corners on the surface.
-//  Two NeoButton actions: Cancel (white) + Delete (red).
-// =====================================================================
 class _BrutalistConfirmDialog extends StatelessWidget {
   final String title;
   final String message;
@@ -745,8 +750,7 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                     borderWidth: NB.borderThin,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(LucideIcons.triangleAlert,
-                      size: 22, color: Colors.white),
+                  child: const Icon(LucideIcons.triangleAlert, size: 22, color: Colors.white),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -765,16 +769,13 @@ class _BrutalistConfirmDialog extends StatelessWidget {
               style: NB.body(13, color: NB.mutedInk, weight: FontWeight.w600),
             ),
             const SizedBox(height: 22),
-            // Two buttons — kept in a Row with Expanded children so they
-            // never overflow on narrow screens.
             Row(
               children: [
                 Expanded(
                   child: NeoButton(
                     color: NB.white,
                     textColor: NB.ink,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     onPressed: () => Navigator.of(context).pop(false),
                     child: Center(
                       child: Text(cancelLabel),
@@ -786,8 +787,7 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                   child: NeoButton(
                     color: NB.hotRed,
                     textColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     onPressed: () => Navigator.of(context).pop(true),
                     child: Center(
                       child: Row(
