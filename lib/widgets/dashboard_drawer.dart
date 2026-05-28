@@ -1,7 +1,3 @@
-// =====================================================================
-//  DASHBOARD DRAWER — NEO-BRUTALISM + MQTT STREAM INTEGRATION
-// =====================================================================
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -17,12 +13,15 @@ class DashboardDrawer extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback onExport;
   final MqttService mqtt;
+  // ← ОПТИМІЗАЦІЯ: отримуємо стан як параметр, StreamBuilder прибрано
+  final MqttConnectionState connectionState;
 
   const DashboardDrawer({
     super.key,
     required this.onOpenSettings,
     required this.onExport,
     required this.mqtt,
+    required this.connectionState,
   });
 
   @override
@@ -131,7 +130,7 @@ class DashboardDrawer extends StatelessWidget {
                   Icon(LucideIcons.zap, size: 16, color: NB.ink),
                   const SizedBox(width: 8),
                   Text(
-                    t('KlimaBox'),
+                    'KlimaBox',
                     style: NB.label(11, weight: FontWeight.w900),
                   ),
                 ],
@@ -144,6 +143,16 @@ class DashboardDrawer extends StatelessWidget {
   }
 
   Widget _buildHeader() {
+    // ← визначаємо тег без StreamBuilder
+    final NeoTag statusTag;
+    if (connectionState == MqttConnectionState.connected) {
+      statusTag = NeoTag.success(t('connected'), icon: LucideIcons.signal);
+    } else if (connectionState == MqttConnectionState.connecting) {
+      statusTag = NeoTag.warn(t('connecting'), icon: LucideIcons.loader);
+    } else {
+      statusTag = NeoTag.error(t('disconnected'), icon: LucideIcons.wifiOff);
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -161,7 +170,9 @@ class DashboardDrawer extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: Colors.black, width: NB.borderThick),
-              boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(4, 4), blurRadius: 0)],
+              boxShadow: const [
+                BoxShadow(color: Colors.black, offset: Offset(4, 4), blurRadius: 0),
+              ],
             ),
             child: Text(
               t('user_name'),
@@ -171,40 +182,15 @@ class DashboardDrawer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
           Row(
             children: [
-              // Плашка групи — винесена в локалізацію
               NeoTag(
                 label: t('user_group'),
                 color: NB.neonYellow,
                 textColor: Colors.black,
               ),
               const SizedBox(width: 8),
-
-              StreamBuilder<MqttConnectionState>(
-                stream: mqtt.stateStream,
-                initialData: mqtt.currentState,
-                builder: (context, snapshot) {
-                  final state = snapshot.data ?? MqttConnectionState.connecting;
-                  if (state == MqttConnectionState.connected) {
-                    return NeoTag.success(
-                      t('connected'),
-                      icon: LucideIcons.signal,
-                    );
-                  } else if (state == MqttConnectionState.connecting) {
-                    return NeoTag.warn(
-                      t('connecting'),
-                      icon: LucideIcons.loader,
-                    );
-                  } else {
-                    return NeoTag.error(
-                      t('disconnected'),
-                      icon: LucideIcons.wifiOff,
-                    );
-                  }
-                },
-              ),
+              statusTag,
             ],
           ),
         ],
@@ -212,10 +198,6 @@ class DashboardDrawer extends StatelessWidget {
     );
   }
 }
-
-// =====================================================================
-//  _DrawerItem
-// =====================================================================
 
 class _DrawerItem extends StatelessWidget {
   final String title;
@@ -260,7 +242,6 @@ class _DrawerItem extends StatelessWidget {
               child: Icon(icon, size: 20, color: NB.ink),
             ),
             const SizedBox(width: 12),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +263,6 @@ class _DrawerItem extends StatelessWidget {
                 ],
               ),
             ),
-
             Icon(LucideIcons.chevronRight, size: 18, color: tc),
           ],
         ),

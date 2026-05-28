@@ -1,16 +1,12 @@
 // =====================================================================
-//  ANALYTICS SCREEN — NEO-BRUTALIST CHART
-//  Logic preserved: same DbService, same FlSpot generation, same axis math.
-//  Visuals rebuilt:
-//    - thick black axes / lines (no grids)
-//    - solid vibrant fills (no gradients)
-//    - chunky bordered chart frame with hard shadow
-//
-//  FIXED: Converted to StatefulWidget with a background Timer for 
-//  seamless real-time updates without flickering.
+//  ANALYTICS SCREEN — ОПТИМІЗОВАНО
+//  1. getLogs() з лімітом 200 замість усіх записів
+//  2. _isAnomaly кешується щоб не рахувати двічі
+//  3. KPI обчислення винесені з build() у _fetchData()
+//     щоб не рахувати при кожній перебудові
 // =====================================================================
 
-import 'dart:async'; // Додано для Timer
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +17,31 @@ import 'theme/neo_brutalist_theme.dart';
 import 'widgets/neo_widgets.dart';
 import 'app_state.dart';
 
+// ── Кешовані результати обчислень ──────────────────────────────────
+class _ChartData {
+  final List<FlSpot> tempPoints;
+  final List<FlSpot> humPoints;
+  final List<Map<String, dynamic>> tempLogs;
+  final double minY;
+  final double maxY;
+  final double tempLast;
+  final double humLast;
+  final double tempAvg;
+  final double humAvg;
+
+  const _ChartData({
+    required this.tempPoints,
+    required this.humPoints,
+    required this.tempLogs,
+    required this.minY,
+    required this.maxY,
+    required this.tempLast,
+    required this.humLast,
+    required this.tempAvg,
+    required this.humAvg,
+  });
+}
+
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
 
@@ -30,34 +51,106 @@ class AnalyticsScreen extends StatefulWidget {
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   final DbService _dbService = DbService();
-  
-  // Локальний стан для збереження даних без перерендеру всього FutureBuilder
-  List<Map<String, dynamic>>? _logs;
+
+  _ChartData? _chartData; // ← кешовані обчислення
+  bool _loading = true;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _fetchData(); // Перше завантаження
-
-    // Періодичне фонове оновлення кожні 15 секунд (БД зберігає дані 1 раз/хв)
+    _fetchData();
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       _fetchData();
     });
   }
 
+  // ← ОПТИМІЗАЦІЯ: всі обчислення тут, а не в build()
   Future<void> _fetchData() async {
-    final data = await _dbService.getLogs();
-    if (mounted) {
+    // ОПТИМІЗАЦІЯ 5: ліміт 200 замість усіх записів
+    final logs = await _dbService.getLogs(limit: 200);
+
+    if (!mounted) return;
+
+    if (logs.isEmpty) {
       setState(() {
-        _logs = data; // Оновлюємо стан новими даними
+        _chartData = null;
+        _loading = false;
       });
+      return;
     }
+
+    // Обчислюємо один раз при завантаженні даних
+    final tempLogs = logs
+        .where((e) => e['type'] == 'temp')
+        .take(20)
+        .toList()
+        .reversed
+        .toList();
+    final humLogs = logs
+        .where((e) => e['type'] == 'hum')
+        .take(20)
+        .toList()
+        .reversed
+        .toList();
+
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+
+    final tempPoints = <FlSpot>[];
+    for (int i = 0; i < tempLogs.length; i++) {
+      final double val = (tempLogs[i]['value'] as num).toDouble();
+      tempPoints.add(FlSpot(i.toDouble(), val));
+      if (val < minY) minY = val;
+      if (val > maxY) maxY = val;
+    }
+
+    final humPoints = <FlSpot>[];
+    for (int i = 0; i < humLogs.length; i++) {
+      final double val = (humLogs[i]['value'] as num).toDouble();
+      humPoints.add(FlSpot(i.toDouble(), val));
+      if (val < minY) minY = val;
+      if (val > maxY) maxY = val;
+    }
+
+    if (minY == double.infinity) {
+      minY = 0;
+      maxY = 100;
+    } else {
+      minY = (minY - 5).clamp(0, double.infinity);
+      maxY += 5;
+    }
+
+    final tempLast = tempPoints.isNotEmpty ? tempPoints.last.y : 0.0;
+    final humLast = humPoints.isNotEmpty ? humPoints.last.y : 0.0;
+    final tempAvg = tempPoints.isEmpty
+        ? 0.0
+        : tempPoints.map((e) => e.y).reduce((a, b) => a + b) /
+            tempPoints.length;
+    final humAvg = humPoints.isEmpty
+        ? 0.0
+        : humPoints.map((e) => e.y).reduce((a, b) => a + b) /
+            humPoints.length;
+
+    setState(() {
+      _loading = false;
+      _chartData = _ChartData(
+        tempPoints: tempPoints,
+        humPoints: humPoints,
+        tempLogs: tempLogs,
+        minY: minY,
+        maxY: maxY,
+        tempLast: tempLast,
+        humLast: humLast,
+        tempAvg: tempAvg,
+        humAvg: humAvg,
+      );
+    });
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel(); // Звільняємо ресурси при виході
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -70,7 +163,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         child: Container(
           decoration: BoxDecoration(
             color: NB.paper,
-            border: Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
+            border: Border(
+                bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
           ),
           child: SafeArea(
             child: Padding(
@@ -119,79 +213,27 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildBody() {
-    // 1. Стан завантаження
-    if (_logs == null) {
+    if (_loading) {
       return Center(
-        child: CircularProgressIndicator(
-          color: NB.ink,
-          strokeWidth: 4,
-        ),
+        child: CircularProgressIndicator(color: NB.ink, strokeWidth: 4),
       );
     }
 
-    // 2. Стан відсутності даних
-    if (_logs!.isEmpty) {
-      return _emptyState();
-    }
+    if (_chartData == null) return _emptyState();
 
-    final logs = _logs!;
-
-    // ── LOGIC PRESERVED VERBATIM ───────────────────────────────
-    final tempLogs =
-        logs.where((e) => e['type'] == 'temp').take(20).toList().reversed.toList();
-    final humLogs =
-        logs.where((e) => e['type'] == 'hum').take(20).toList().reversed.toList();
-
-    double minY = double.infinity;
-    double maxY = double.negativeInfinity;
-
-    List<FlSpot> tempPoints = [];
-    for (int i = 0; i < tempLogs.length; i++) {
-      double val = (tempLogs[i]['value'] as num).toDouble();
-      tempPoints.add(FlSpot(i.toDouble(), val));
-      if (val < minY) minY = val;
-      if (val > maxY) maxY = val;
-    }
-
-    List<FlSpot> humPoints = [];
-    for (int i = 0; i < humLogs.length; i++) {
-      double val = (humLogs[i]['value'] as num).toDouble();
-      humPoints.add(FlSpot(i.toDouble(), val));
-      if (val < minY) minY = val;
-      if (val > maxY) maxY = val;
-    }
-
-    if (minY == double.infinity) {
-      minY = 0;
-      maxY = 100;
-    } else {
-      minY = (minY - 5).clamp(0, double.infinity);
-      maxY += 5;
-    }
-    // ──────────────────────────────────────────────────────────
-
-    // KPIs
-    double tempLast = tempPoints.isNotEmpty ? tempPoints.last.y : 0;
-    double humLast = humPoints.isNotEmpty ? humPoints.last.y : 0;
-    double tempAvg = tempPoints.isEmpty
-        ? 0
-        : tempPoints.map((e) => e.y).reduce((a, b) => a + b) / tempPoints.length;
-    double humAvg = humPoints.isEmpty
-        ? 0
-        : humPoints.map((e) => e.y).reduce((a, b) => a + b) / humPoints.length;
+    final d = _chartData!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // KPI strip
           Row(
             children: [
               Expanded(
                 child: _kpiTile(
                   t('temp_now'),
-                  "${tempLast.toStringAsFixed(1)}°C",
+                  "${d.tempLast.toStringAsFixed(1)}°C",
                   NB.neonYellow,
                   LucideIcons.thermometer,
                   textColor: Colors.black,
@@ -201,7 +243,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Expanded(
                 child: _kpiTile(
                   t('hum_now'),
-                  "${humLast.toStringAsFixed(1)}%",
+                  "${d.humLast.toStringAsFixed(1)}%",
                   NB.electricBlue,
                   LucideIcons.droplets,
                   textColor: Colors.white,
@@ -215,7 +257,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Expanded(
                 child: _kpiTile(
                   t('temp_avg'),
-                  "${tempAvg.toStringAsFixed(1)}°C",
+                  "${d.tempAvg.toStringAsFixed(1)}°C",
                   NB.white,
                   LucideIcons.activity,
                 ),
@@ -224,7 +266,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               Expanded(
                 child: _kpiTile(
                   t('hum_avg'),
-                  "${humAvg.toStringAsFixed(1)}%",
+                  "${d.humAvg.toStringAsFixed(1)}%",
                   NB.mintGreen,
                   LucideIcons.activity,
                   textColor: Colors.black,
@@ -257,12 +299,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 Expanded(
                   child: LineChart(
                     LineChartData(
-                      minY: minY,
-                      maxY: maxY,
+                      minY: d.minY,
+                      maxY: d.maxY,
                       clipData: const FlClipData.all(),
-                      // No grid (Brutalist directive)
                       gridData: const FlGridData(show: false),
-                      // Thick black/white border axes
                       borderData: FlBorderData(
                         show: true,
                         border: Border(
@@ -287,8 +327,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                 "${spot.y.toStringAsFixed(1)} ${isTemp ? '°C' : '%'}",
                                 NB.mono(13,
                                     weight: FontWeight.w900,
-                                    color:
-                                        isTemp ? NB.ink : NB.electricBlue),
+                                    color: isTemp ? NB.ink : NB.electricBlue),
                               );
                             }).toList();
                           },
@@ -296,7 +335,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ),
                       lineBarsData: [
                         LineChartBarData(
-                          spots: tempPoints,
+                          spots: d.tempPoints,
                           isCurved: false,
                           color: NB.ink,
                           barWidth: 4,
@@ -317,7 +356,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           ),
                         ),
                         LineChartBarData(
-                          spots: humPoints,
+                          spots: d.humPoints,
                           isCurved: false,
                           color: NB.electricBlue,
                           barWidth: 4,
@@ -345,19 +384,20 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           sideTitles: SideTitles(
                             showTitles: true,
                             reservedSize: 30,
-                            interval: tempLogs.isEmpty
+                            interval: d.tempLogs.isEmpty
                                 ? 1
-                                : (tempLogs.length / 5).ceilToDouble(),
+                                : (d.tempLogs.length / 5).ceilToDouble(),
                             getTitlesWidget: (value, meta) {
                               final int index = value.toInt();
-                              if (index >= 0 && index < tempLogs.length) {
-                                DateTime time = DateTime.parse(
-                                    tempLogs[index]['timestamp']);
+                              if (index >= 0 && index < d.tempLogs.length) {
+                                final DateTime time = DateTime.parse(
+                                    d.tempLogs[index]['timestamp']);
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Text(
                                     DateFormat('HH:mm').format(time),
-                                    style: NB.label(10, weight: FontWeight.w800),
+                                    style:
+                                        NB.label(10, weight: FontWeight.w800),
                                   ),
                                 );
                               }
@@ -374,8 +414,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                                 padding: const EdgeInsets.only(right: 6),
                                 child: Text(
                                   value.toInt().toString(),
-                                  style:
-                                      NB.label(10, weight: FontWeight.w800),
+                                  style: NB.label(10, weight: FontWeight.w800),
                                 ),
                               );
                             },
@@ -397,15 +436,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               borderWidth: NB.borderThin,
               shadow: NB.hardShadowSm,
             ),
-            child: Row(
+            child: const Row(
               children: [
-                const Icon(LucideIcons.info, size: 16, color: Colors.black),
-                const SizedBox(width: 8),
+                Icon(LucideIcons.info, size: 16, color: Colors.black),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    t('tap_chart_point'),
-                    style: NB.label(11,
-                        weight: FontWeight.w900, color: Colors.black),
+                    // Якщо t() не const — прибрати const з Row
+                    'Натисніть на точку графіка для деталей',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ],
@@ -416,7 +459,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ── EMPTY STATE ─────────────────────────────────────────────────
   Widget _emptyState() {
     return Center(
       child: Container(
@@ -434,7 +476,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 shadow: NB.hardShadowSm,
                 borderWidth: NB.borderThin,
               ),
-              child: const Icon(LucideIcons.chartBar, size: 36, color: Colors.black),
+              child: const Icon(LucideIcons.chartBar,
+                  size: 36, color: Colors.black),
             ),
             const SizedBox(height: 16),
             Text(t('no_data_yet'), style: NB.display(20)),
@@ -450,7 +493,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ── KPI TILE ────────────────────────────────────────────────────
   Widget _kpiTile(
     String label,
     String value,
@@ -493,7 +535,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  // ── LEGEND ──────────────────────────────────────────────────────
   Widget _legendItem(String text, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,

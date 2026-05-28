@@ -1,18 +1,9 @@
 // =====================================================================
 //  LOG SCREEN — NEO-BRUTALIST EVENT LOG
-//
-//  Logic preserved: filter chips, date filter, dismiss-to-delete,
-//  ascending toggle, CSV export — all unchanged.
-//
-//  ── ISSUE FIXES ──
-//  • FutureBuilder removed: Logs are now cached in state (_rawLogs).
-//  • Sorting & Deletions now execute instantly by re-processing the
-//    local cache (_processLogs) instead of hitting the DB.
-//  • _isAnomaly() fallbacks to sensible ranges if config is missing.
-//  • Clear-All flows correctly through the new state manager.
-//
-//  IMPORTANT: filter values ('Всі', 'Температура', 'Вологість') remain
-//  Ukrainian literals because db_service.dart matches them exactly.
+//  ОПТИМІЗОВАНО:
+//  1. _selectedType конвертується в системні ключі 'temp'/'hum'/null
+//  2. limit: 500 у _fetchLogs()
+//  3. RepaintBoundary навколо списку
 // =====================================================================
 
 import 'settings_service.dart';
@@ -40,13 +31,12 @@ class LogScreen extends StatefulWidget {
 
 class _LogScreenState extends State<LogScreen> {
   final DbService _dbService = DbService();
-  final SettingsService _settings = SettingsService(); 
+  final SettingsService _settings = SettingsService();
 
   String _selectedType = 'Всі';
   String _searchDate = '';
   bool _isAscending = false;
 
-  // КЕШУВАННЯ ДАНИХ (Вирішення проблеми з FutureBuilder)
   List<Map<String, dynamic>>? _rawLogs;
   Map<String, List<Map<String, dynamic>>>? _groupedLogs;
   bool _isLoading = true;
@@ -55,41 +45,51 @@ class _LogScreenState extends State<LogScreen> {
   void initState() {
     super.initState();
     _settings.load().then((_) {
-      if (mounted) setState(() {}); 
+      if (mounted) setState(() {});
     });
-    _fetchLogs(); // Первинне завантаження
+    _fetchLogs();
   }
 
-  // Завантажує дані з БД (тільки при зміні фільтрів або Refresh)
+  // ← ОПТИМІЗАЦІЯ 1: конвертуємо UI-значення в системні ключі БД
+  String? _dbType() {
+    if (_selectedType == 'Температура') return 'temp';
+    if (_selectedType == 'Вологість') return 'hum';
+    return null; // 'Всі' → без фільтру
+  }
+
   Future<void> _fetchLogs() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
-    final logs = await _dbService.getLogs(type: _selectedType, date: _searchDate);
-    
+
+    // ← ОПТИМІЗАЦІЯ 1+2: системний ключ + ліміт 500
+    final logs = await _dbService.getLogs(
+      type: _dbType(),
+      date: _searchDate,
+      limit: 500,
+    );
+
     if (!mounted) return;
     _rawLogs = logs;
     _processLogs();
   }
 
-  // Перераховує сортування та групування локально (без запитів до БД)
   void _processLogs() {
     if (_rawLogs == null) return;
-    
+
     List<Map<String, dynamic>> logs = List.from(_rawLogs!);
-    
     if (_isAscending) {
       logs = logs.reversed.toList();
     }
-    
+
     _groupedLogs = _groupLogsByDate(logs);
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
   }
 
-  Map<String, List<Map<String, dynamic>>> _groupLogsByDate(List<Map<String, dynamic>> logs) {
+  Map<String, List<Map<String, dynamic>>> _groupLogsByDate(
+      List<Map<String, dynamic>> logs) {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (var log in logs) {
       final DateTime date = DateTime.parse(log['timestamp']);
@@ -103,7 +103,8 @@ class _LogScreenState extends State<LogScreen> {
   String _formatHeaderDate(String dateStr) {
     final DateTime date = DateTime.parse(dateStr);
     final DateTime now = DateTime.now();
-    if (DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(now)) {
+    if (DateFormat('yyyy-MM-dd').format(date) ==
+        DateFormat('yyyy-MM-dd').format(now)) {
       return t('today');
     }
     return DateFormat('d MMMM, yyyy').format(date);
@@ -153,7 +154,6 @@ class _LogScreenState extends State<LogScreen> {
     await _dbService.clearLogs();
     if (!mounted) return;
 
-    // Очищаємо локальний кеш миттєво
     _rawLogs?.clear();
     _processLogs();
 
@@ -167,7 +167,8 @@ class _LogScreenState extends State<LogScreen> {
             const SizedBox(width: 10),
             Text(
               t('all_logs_cleared'),
-              style: NB.label(12, color: NB.neonYellow, weight: FontWeight.w900),
+              style:
+                  NB.label(12, color: NB.neonYellow, weight: FontWeight.w900),
             ),
           ],
         ),
@@ -190,12 +191,14 @@ class _LogScreenState extends State<LogScreen> {
         child: Container(
           decoration: BoxDecoration(
             color: NB.paper,
-            border: Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
+            border: Border(
+                bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
           ),
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   GestureDetector(
@@ -214,7 +217,7 @@ class _LogScreenState extends State<LogScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          t('log_title'), 
+                          t('log_title'),
                           style: NB.display(20),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -230,13 +233,14 @@ class _LogScreenState extends State<LogScreen> {
                     ),
                   ),
                   GestureDetector(
-                    // Миттєве сортування локально
                     onTap: () {
                       _isAscending = !_isAscending;
                       _processLogs();
                     },
                     child: NeoIconBox(
-                      icon: _isAscending ? LucideIcons.arrowUp : LucideIcons.arrowDown,
+                      icon: _isAscending
+                          ? LucideIcons.arrowUp
+                          : LucideIcons.arrowDown,
                       background: NB.neonYellow,
                       iconColor: Colors.black,
                       size: 44,
@@ -264,11 +268,14 @@ class _LogScreenState extends State<LogScreen> {
         children: [
           _buildFilterBar(),
           Expanded(
-            child: RefreshIndicator(
-              color: NB.ink,
-              backgroundColor: NB.neonYellow,
-              onRefresh: _fetchLogs,
-              child: _buildListContent(),
+            // ← ОПТИМІЗАЦІЯ 3: RepaintBoundary ізолює список від фільтр-бару
+            child: RepaintBoundary(
+              child: RefreshIndicator(
+                color: NB.ink,
+                backgroundColor: NB.neonYellow,
+                onRefresh: _fetchLogs,
+                child: _buildListContent(),
+              ),
             ),
           ),
         ],
@@ -276,7 +283,6 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // Виділено в окремий метод для чистоти build()
   Widget _buildListContent() {
     if (_isLoading || _groupedLogs == null) {
       return Center(
@@ -285,11 +291,10 @@ class _LogScreenState extends State<LogScreen> {
     }
 
     if (_rawLogs!.isEmpty) {
-      // Використовуємо ListView, щоб RefreshIndicator працював навіть коли порожньо
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const SizedBox(height: 80), // Відступ для центрування
+          const SizedBox(height: 80),
           _emptyState(),
         ],
       );
@@ -317,14 +322,14 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── FILTER BAR ─────────────────────────────────────────────────
   Widget _buildFilterBar() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: NB.white,
-        border: Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
+        border:
+            Border(bottom: BorderSide(color: NB.ink, width: NB.borderThick)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,10 +352,12 @@ class _LogScreenState extends State<LogScreen> {
                 _filterChip('Всі', t('all'), LucideIcons.layers, NB.neonYellow,
                     selectedTextColor: Colors.black),
                 const SizedBox(width: 10),
-                _filterChip('Температура', t('temperature'), LucideIcons.thermometer, NB.neonYellow,
+                _filterChip('Температура', t('temperature'),
+                    LucideIcons.thermometer, NB.neonYellow,
                     selectedTextColor: Colors.black),
                 const SizedBox(width: 10),
-                _filterChip('Вологість', t('humidity'), LucideIcons.droplets, NB.electricBlue,
+                _filterChip('Вологість', t('humidity'), LucideIcons.droplets,
+                    NB.electricBlue,
                     selectedTextColor: Colors.white),
                 const SizedBox(width: 16),
                 Container(width: 2.5, height: 32, color: NB.ink),
@@ -398,15 +405,18 @@ class _LogScreenState extends State<LogScreen> {
           builder: (ctx, child) => Theme(
             data: (NB.isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
               colorScheme: NB.isDark
-                  ? const ColorScheme.dark(primary: Color(0xFFFF10F0), onPrimary: Colors.black)
-                  : const ColorScheme.light(primary: Colors.black, onPrimary: Colors.white),
+                  ? const ColorScheme.dark(
+                      primary: Color(0xFFFF10F0),
+                      onPrimary: Colors.black)
+                  : const ColorScheme.light(
+                      primary: Colors.black, onPrimary: Colors.white),
             ),
             child: child!,
           ),
         );
         if (date != null) {
           _searchDate = DateFormat('yyyy-MM-dd').format(date);
-          _fetchLogs(); // Запит до БД
+          _fetchLogs();
         }
       },
       child: Container(
@@ -421,7 +431,8 @@ class _LogScreenState extends State<LogScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(LucideIcons.calendar,
-                size: 14, color: _searchDate.isEmpty ? NB.ink : Colors.black),
+                size: 14,
+                color: _searchDate.isEmpty ? NB.ink : Colors.black),
             const SizedBox(width: 6),
             Text(
               _searchDate.isEmpty ? t('any_date') : _searchDate,
@@ -434,7 +445,7 @@ class _LogScreenState extends State<LogScreen> {
               GestureDetector(
                 onTap: () {
                   _searchDate = '';
-                  _fetchLogs(); // Запит до БД
+                  _fetchLogs();
                 },
                 child: const Icon(LucideIcons.x, size: 14, color: Colors.black),
               ),
@@ -457,7 +468,7 @@ class _LogScreenState extends State<LogScreen> {
       onTap: () {
         if (_selectedType != value) {
           _selectedType = value;
-          _fetchLogs(); // Запит до БД
+          _fetchLogs();
         }
       },
       child: Container(
@@ -475,11 +486,9 @@ class _LogScreenState extends State<LogScreen> {
             const SizedBox(width: 6),
             Text(
               displayLabel.toUpperCase(),
-              style: NB.label(
-                11,
-                weight: FontWeight.w900,
-                color: selected ? selectedTextColor : NB.ink,
-              ),
+              style: NB.label(11,
+                  weight: FontWeight.w900,
+                  color: selected ? selectedTextColor : NB.ink),
             ),
           ],
         ),
@@ -487,7 +496,6 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── DATE HEADER ───────────────────────────────────────────────
   Widget _buildDateHeader(String dateKey, int count) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -516,7 +524,8 @@ class _LogScreenState extends State<LogScreen> {
             ),
             child: Text(
               "$count ${t('entries')}",
-              style: NB.label(9.5, weight: FontWeight.w900, color: Colors.black),
+              style:
+                  NB.label(9.5, weight: FontWeight.w900, color: Colors.black),
             ),
           ),
         ],
@@ -524,11 +533,11 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── LOG TILE ──────────────────────────────────────────────────
   Widget _buildLogTile(Map<String, dynamic> log) {
     final String type = log['type'];
     final num value = log['value'];
-    final String time = DateFormat('HH:mm:ss').format(DateTime.parse(log['timestamp']));
+    final String time = DateFormat('HH:mm:ss')
+        .format(DateTime.parse(log['timestamp']));
     final bool isAnomaly = _isAnomaly(type, value);
 
     return Padding(
@@ -545,7 +554,8 @@ class _LogScreenState extends State<LogScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(t('delete'),
-                  style: NB.label(12, color: Colors.white, weight: FontWeight.w900)),
+                  style: NB.label(12,
+                      color: Colors.white, weight: FontWeight.w900)),
               const SizedBox(width: 8),
               const Icon(LucideIcons.trash2, color: Colors.white, size: 22),
             ],
@@ -554,16 +564,16 @@ class _LogScreenState extends State<LogScreen> {
         onDismissed: (direction) async {
           await _dbService.deleteLog(log['id']);
           if (mounted) {
-            // Миттєве оновлення кешу без запиту до БД
             _rawLogs?.removeWhere((e) => e['id'] == log['id']);
             _processLogs();
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: NB.ink,
                 content: Text(
                   t('record_deleted'),
-                  style: NB.label(12, color: NB.neonYellow, weight: FontWeight.w900),
+                  style: NB.label(12,
+                      color: NB.neonYellow, weight: FontWeight.w900),
                 ),
                 duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
@@ -596,7 +606,9 @@ class _LogScreenState extends State<LogScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  type == 'temp' ? LucideIcons.thermometer : LucideIcons.droplets,
+                  type == 'temp'
+                      ? LucideIcons.thermometer
+                      : LucideIcons.droplets,
                   size: 22,
                   color: type == 'temp' ? Colors.black : Colors.white,
                 ),
@@ -611,11 +623,9 @@ class _LogScreenState extends State<LogScreen> {
                       children: [
                         Text(
                           "$value",
-                          style: NB.mono(
-                            22,
-                            weight: FontWeight.w900,
-                            color: isAnomaly ? NB.hotRed : NB.ink,
-                          ),
+                          style: NB.mono(22,
+                              weight: FontWeight.w900,
+                              color: isAnomaly ? NB.hotRed : NB.ink),
                         ),
                         const SizedBox(width: 4),
                         Padding(
@@ -627,21 +637,26 @@ class _LogScreenState extends State<LogScreen> {
                         ),
                         const SizedBox(width: 10),
                         if (isAnomaly)
-                          NeoTag.error(t('error'), icon: LucideIcons.triangleAlert)
+                          NeoTag.error(t('error'),
+                              icon: LucideIcons.triangleAlert)
                         else
                           NeoTag.info(t('info'), icon: LucideIcons.check),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      type == 'temp' ? t('temperature_label') : t('humidity_label'),
-                      style: NB.label(10, weight: FontWeight.w800, color: NB.mutedInk),
+                      type == 'temp'
+                          ? t('temperature_label')
+                          : t('humidity_label'),
+                      style: NB.label(10,
+                          weight: FontWeight.w800, color: NB.mutedInk),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: nbBlock(
                   color: NB.ink,
                   radius: 3,
@@ -650,7 +665,8 @@ class _LogScreenState extends State<LogScreen> {
                 ),
                 child: Text(
                   time,
-                  style: NB.mono(11, color: NB.neonYellow, weight: FontWeight.w800),
+                  style:
+                      NB.mono(11, color: NB.neonYellow, weight: FontWeight.w800),
                 ),
               ),
             ],
@@ -660,7 +676,6 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  // ── EMPTY STATE ──────────────────────────────────────────────
   Widget _emptyState() {
     return Center(
       child: Container(
@@ -678,7 +693,8 @@ class _LogScreenState extends State<LogScreen> {
                 shadow: NB.hardShadowSm,
                 borderWidth: NB.borderThin,
               ),
-              child: const Icon(LucideIcons.clipboardList, size: 36, color: Colors.white),
+              child: const Icon(LucideIcons.clipboardList,
+                  size: 36, color: Colors.white),
             ),
             const SizedBox(height: 16),
             Text(t('no_records'), style: NB.display(20)),
@@ -724,7 +740,8 @@ class _BrutalistConfirmDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
       elevation: 0,
       child: Container(
         padding: const EdgeInsets.all(22),
@@ -750,7 +767,8 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                     borderWidth: NB.borderThin,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(LucideIcons.triangleAlert, size: 22, color: Colors.white),
+                  child: const Icon(LucideIcons.triangleAlert,
+                      size: 22, color: Colors.white),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -775,11 +793,10 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                   child: NeoButton(
                     color: NB.white,
                     textColor: NB.ink,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 14),
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: Center(
-                      child: Text(cancelLabel),
-                    ),
+                    child: const Center(child: Text('Скасувати')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -787,24 +804,23 @@ class _BrutalistConfirmDialog extends StatelessWidget {
                   child: NeoButton(
                     color: NB.hotRed,
                     textColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 14),
                     onPressed: () => Navigator.of(context).pop(true),
-                    child: Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(LucideIcons.trash2, size: 14),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              confirmLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(LucideIcons.trash2, size: 14),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            confirmLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -8,7 +8,6 @@
 // =====================================================================
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class NB {
   NB._();
@@ -91,47 +90,43 @@ class NB {
 
   // ── TYPOGRAPHY ────────────────────────────────────────────────────
   static TextStyle display(double size, {Color? color}) =>
-      GoogleFonts.unbounded(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: FontWeight.w900,
-          color: color ?? ink,
-          height: 1.0,
-          letterSpacing: 0.5,
-        ),
+      TextStyle(
+        fontFamily: 'Unbounded', // ← Використовуємо локальний шрифт
+        fontSize: size,
+        fontWeight: FontWeight.w900,
+        color: color ?? ink,
+        height: 1.0,
+        letterSpacing: 0.5,
       );
 
   static TextStyle mono(double size, {FontWeight weight = FontWeight.w800, Color? color}) =>
-      GoogleFonts.jetBrainsMono(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          color: color ?? ink,
-          height: 1.0,
-          letterSpacing: -0.5,
-        ),
+      TextStyle(
+        fontFamily: 'JetBrainsMono', // ← Використовуємо локальний шрифт
+        fontSize: size,
+        fontWeight: weight,
+        color: color ?? ink,
+        height: 1.0,
+        letterSpacing: -0.5,
       );
 
   static TextStyle label(double size, {FontWeight weight = FontWeight.w800, Color? color}) =>
-      GoogleFonts.manrope(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          color: color ?? ink,
-          height: 1.2,
-          letterSpacing: 1.5,
-        ),
+      TextStyle(
+        fontFamily: 'Manrope', // ← Використовуємо локальний шрифт
+        fontSize: size,
+        fontWeight: weight,
+        color: color ?? ink,
+        height: 1.2,
+        letterSpacing: 1.5,
       );
 
   static TextStyle body(double size, {FontWeight weight = FontWeight.w600, Color? color}) =>
-      GoogleFonts.manrope(
-        textStyle: TextStyle(
-          fontSize: size,
-          fontWeight: weight,
-          color: color ?? ink,
-          height: 1.4,
-          letterSpacing: 0.2,
-        ),
+      TextStyle(
+        fontFamily: 'Manrope', // ← Використовуємо локальний шрифт
+        fontSize: size,
+        fontWeight: weight,
+        color: color ?? ink,
+        height: 1.4,
+        letterSpacing: 0.2,
       );
 }
 

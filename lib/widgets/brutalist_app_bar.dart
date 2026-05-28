@@ -8,7 +8,14 @@ import 'neo_widgets.dart';
 
 class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
   final MqttService mqtt;
-  const BrutalistAppBar({super.key, required this.mqtt});
+  // ← ОПТИМІЗАЦІЯ: отримуємо стан як параметр, без StreamBuilder
+  final MqttConnectionState connectionState;
+
+  const BrutalistAppBar({
+    super.key,
+    required this.mqtt,
+    required this.connectionState,
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(72);
@@ -42,7 +49,6 @@ class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ВИПРАВЛЕНО: 'KlimaBox' тепер звичайний літерал, без t()
                     Text(
                       'KlimaBox',
                       style: NB.display(20),
@@ -50,7 +56,7 @@ class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    _ConnectionStatus(mqtt: mqtt),
+                    _ConnectionStatus(state: connectionState),
                   ],
                 ),
               ),
@@ -63,51 +69,44 @@ class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class _ConnectionStatus extends StatelessWidget {
-  final MqttService mqtt;
-  const _ConnectionStatus({required this.mqtt});
+  // ← отримуємо стан напряму, StreamBuilder прибрано
+  final MqttConnectionState state;
+  const _ConnectionStatus({required this.state});
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<MqttConnectionState>(
-      stream: mqtt.stateStream,
-      builder: (context, snap) {
-        final state = snap.data ?? MqttConnectionState.disconnected;
-        final bool connected = state == MqttConnectionState.connected;
+    Color color;
+    String? label;
 
-        Color color;
-        String? label; // null = не показуємо текст
+    if (state == MqttConnectionState.connected) {
+      color = NB.mintGreen;
+      label = null;
+    } else if (state == MqttConnectionState.error) {
+      color = NB.hotRed;
+      label = null;
+    } else {
+      color = const Color(0xFF8A8A8A);
+      label = t('connecting');
+    }
 
-        if (connected) {
-          color = NB.mintGreen;
-          label = null; // лише індикатор
-        } else if (state == MqttConnectionState.error) {
-          color = NB.hotRed;
-          label = null; // лише індикатор
-        } else {
-          color = const Color(0xFF8A8A8A);
-          label = t('connecting');
-        }
-
-        return Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: color,
-                border: Border.all(color: NB.ink, width: 1.5),
-              ),
-            ),
-            if (label != null) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: NB.label(10.5, color: NB.ink, weight: FontWeight.w800),
-              ),
-            ],
-          ],
-        );
-      },
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            border: Border.all(color: NB.ink, width: 1.5),
+          ),
+        ),
+        if (label != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: NB.label(10.5, color: NB.ink, weight: FontWeight.w800),
+          ),
+        ],
+      ],
     );
   }
 }
