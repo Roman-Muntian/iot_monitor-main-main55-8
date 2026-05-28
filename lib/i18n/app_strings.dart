@@ -19,13 +19,12 @@ class S {
       'client_active': 'КЛІЄНТ АКТИВНИЙ',
       'user_name': 'Мунтян Роман',
       'user_group': '41-КІ',
-      // Connection Status (Нові ключі для смужки статусу)
       'connected': 'ПІДКЛЮЧЕНО',
       'connecting': 'З\'ЄДНАННЯ…',
       'connection_error': 'ПОМИЛКА З\'ЄДНАННЯ',
       'disconnected': 'ВІДКЛЮЧЕНО',
       
-      'link_error': 'ПОМИЛКА ЗВ\'ЯЗКУ', // Виправлено з "лінка"
+      'link_error': 'ПОМИЛКА ЗВ\'ЯЗКУ',
       'live': 'НАЖИВО',
       'real_time_telemetry': 'РЕАЛЬНИЙ ЧАС',
       'realtime_subtitle':
@@ -64,7 +63,15 @@ class S {
       'light': 'СВІТЛА',
       'dark': 'ТЕМНА',
 
-      // Alarms
+      // Alarms (Сповіщення)
+      'alert_temp_title': 'Температура',
+      'alert_hum_title': 'Вологість',
+      'temp_high': 'Температура перевищує заданий ліміт.',
+      'temp_low': 'Температура нижче заданого ліміту.',
+      'hum_high': 'Вологість перевищує заданий ліміт.',
+      'hum_low': 'Вологість нижче заданого ліміту.',
+
+      // Старі ключі (залишаємо, якщо вони використовуються в UI)
       'temp_too_low': 'Температура занизька',
       'temp_too_high': 'Температура зависока',
       'hum_too_low': 'Вологість занизька',
@@ -122,7 +129,6 @@ class S {
       'client_active': 'CLIENT ACTIVE',
       'user_name': 'Muntian Roman',
       'user_group': '41-КІ',
-      // Connection Status (Нові ключі для смужки статусу)
       'connected': 'CONNECTED',
       'connecting': 'CONNECTING…',
       'connection_error': 'CONNECTION ERROR',
@@ -167,7 +173,15 @@ class S {
       'light': 'LIGHT',
       'dark': 'DARK',
 
-      // Alarms
+      // Alarms (Сповіщення)
+      'alert_temp_title': 'Temperature',
+      'alert_hum_title': 'Humidity',
+      'temp_high': 'Temperature is above the set limit.',
+      'temp_low': 'Temperature is below the set limit.',
+      'hum_high': 'Humidity is above the set limit.',
+      'hum_low': 'Humidity is below the set limit.',
+
+      // Старі ключі
       'temp_too_low': 'Temperature too low',
       'temp_too_high': 'Temperature too high',
       'hum_too_low': 'Humidity too low',
