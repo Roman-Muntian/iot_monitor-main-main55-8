@@ -7,7 +7,7 @@ import '../app_state.dart';
 import '../log_screen.dart';
 import '../mqtt_service.dart';
 import '../theme/neo_brutalist_theme.dart';
-import 'neo_widgets.dart';
+import 'neo_primitives.dart';
 
 class DashboardDrawer extends StatelessWidget {
   final VoidCallback onOpenSettings;

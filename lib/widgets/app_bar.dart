@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../mqtt_service.dart';
 import '../theme/neo_brutalist_theme.dart';
-import 'neo_widgets.dart';
+import 'neo_primitives.dart';
 
 class BrutalistAppBar extends StatelessWidget implements PreferredSizeWidget {
   final MqttService mqtt;

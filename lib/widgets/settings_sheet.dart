@@ -9,9 +9,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../app_state.dart';
 import '../mqtt_service.dart';
 import '../theme/neo_brutalist_theme.dart';
-import 'brutalist_range_slider.dart';
-import 'brutalist_toggle.dart';
-import 'neo_widgets.dart';
+import 'range_slider.dart';
+import 'toggle.dart';
+import 'neo_primitives.dart';
 
 /// Show the brutalist Settings bottom sheet.
 void showSettingsSheet(BuildContext context, MqttService mqtt) {

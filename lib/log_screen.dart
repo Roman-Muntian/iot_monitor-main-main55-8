@@ -14,7 +14,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'db_service.dart';
 import 'export_service.dart';
 import 'theme/neo_brutalist_theme.dart';
-import 'widgets/neo_widgets.dart';
+import 'widgets/neo_primitives.dart';
+import 'widgets/confirm_dialog.dart';
 import 'app_state.dart';
 
 const double _kFallbackTempMin = 10.0;
@@ -141,7 +142,7 @@ class _LogScreenState extends State<LogScreen> {
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (ctx) => _BrutalistConfirmDialog(
+      builder: (ctx) => ConfirmDialog(
         title: t('confirm_delete_title'),
         message: t('confirm_delete_msg'),
         cancelLabel: t('cancel'),
@@ -382,12 +383,15 @@ class _LogScreenState extends State<LogScreen> {
           shadow: NB.hardShadowSm,
           borderWidth: NB.borderThin,
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.trash2, size: 13, color: Colors.white),
-            SizedBox(width: 6),
-            _ClearAllLabel(),
+            const Icon(LucideIcons.trash2, size: 13, color: Colors.white),
+            const SizedBox(width: 6),
+            Text(
+                t('clear_all'),
+                style: NB.label(11, weight: FontWeight.w900, color: Colors.white),
+              ),
           ],
         ),
       ),
@@ -703,128 +707,6 @@ class _LogScreenState extends State<LogScreen> {
               t('records_appear'),
               style: NB.body(13, color: NB.mutedInk),
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ClearAllLabel extends StatelessWidget {
-  const _ClearAllLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      t('clear_all'),
-      style: NB.label(11, weight: FontWeight.w900, color: Colors.white),
-    );
-  }
-}
-
-class _BrutalistConfirmDialog extends StatelessWidget {
-  final String title;
-  final String message;
-  final String cancelLabel;
-  final String confirmLabel;
-
-  const _BrutalistConfirmDialog({
-    required this.title,
-    required this.message,
-    required this.cancelLabel,
-    required this.confirmLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding:
-          const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-      elevation: 0,
-      child: Container(
-        padding: const EdgeInsets.all(22),
-        decoration: nbBlock(
-          color: NB.white,
-          radius: NB.radiusChunky,
-          shadow: NB.hardShadowLg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: nbBlock(
-                    color: NB.hotRed,
-                    radius: 6,
-                    shadow: NB.hardShadowSm,
-                    borderWidth: NB.borderThin,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(LucideIcons.triangleAlert,
-                      size: 22, color: Colors.white),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: NB.display(15),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: NB.body(13, color: NB.mutedInk, weight: FontWeight.w600),
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: NeoButton(
-                    color: NB.white,
-                    textColor: NB.ink,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Center(child: Text('Скасувати')),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: NeoButton(
-                    color: NB.hotRed,
-                    textColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 14),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(LucideIcons.trash2, size: 14),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            confirmLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),

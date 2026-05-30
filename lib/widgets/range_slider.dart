@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/neo_brutalist_theme.dart';
-import 'neo_widgets.dart';
+import 'neo_primitives.dart';
 
 class BrutalistRangeSlider extends StatelessWidget {
   final String label, unit;

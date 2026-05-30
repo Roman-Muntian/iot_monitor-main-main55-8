@@ -14,7 +14,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'db_service.dart';
 import 'theme/neo_brutalist_theme.dart';
-import 'widgets/neo_widgets.dart';
+import 'widgets/neo_primitives.dart';
 import 'app_state.dart';
 
 // ── Кешовані результати обчислень ──────────────────────────────────

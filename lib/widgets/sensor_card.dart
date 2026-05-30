@@ -11,7 +11,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../analytics_screen.dart';
 import '../app_state.dart';
 import '../theme/neo_brutalist_theme.dart';
-import 'neo_widgets.dart';
+import 'neo_primitives.dart';
 
 class SensorCard extends StatelessWidget {
   final String title;
